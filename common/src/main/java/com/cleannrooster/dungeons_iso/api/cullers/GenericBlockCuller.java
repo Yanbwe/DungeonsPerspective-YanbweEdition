@@ -73,14 +73,8 @@ public class GenericBlockCuller implements BlockCuller {
         return false;
     }
 
-    List<Class<? extends Block>> ignoredTypes = List.of(WallMountedBlock.class);
     public boolean isIgnoredType(Block block) {
-        for (Class<? extends Block> ignoredType : ignoredTypes) {
-            if (ignoredType.isInstance(block)) {
-                return true;
-            }
-        }
-        return false;
+        return block instanceof WallMountedBlock;
     }
     @Override
     public int frequency() {

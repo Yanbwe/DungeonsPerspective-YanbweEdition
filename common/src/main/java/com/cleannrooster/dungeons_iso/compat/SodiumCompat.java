@@ -34,6 +34,9 @@ public class SodiumCompat {
     public static LinkedHashMap<BlockPos,BlockCuller.TransparentBlock> transparentBlocks;
     public static FloodCuller floodCuller = new FloodCuller();
     public static List<BlockPos> stream = List.of();
+    // Last player block position that triggered a Sodium chunk rebuild.
+    // Rebuilds are skipped while the player stays on the same block.
+    private static BlockPos lastRebuildPos = BlockPos.ORIGIN;
     public static FogOfWar fogOfWar;
     public static HashMap<List<Integer>, HitResult> map = new HashMap<>();
     static{
@@ -61,15 +64,23 @@ public class SodiumCompat {
         }
 
 
-        Box box = new Box(MinecraftClient.getInstance().player.getEyePos(),MinecraftClient.getInstance().gameRenderer.getCamera().getPos()).expand(1,0,1);
         if(MinecraftClient.getInstance().cameraEntity!= null) {
             stream = floodCuller.getCulledBlocks(MinecraftClient.getInstance().player.getBlockPos().up(), MinecraftClient.getInstance().gameRenderer.getCamera(), MinecraftClient.getInstance().cameraEntity);
         }
-        double dub = 1.25*Mod.getZoom()*Mod.zoomMetric;
-        box.expand(dub,dub,dub);
 
-        if (MinecraftClient.getInstance().player.age % 2 == 0) {
-            SodiumWorldRenderer.instance().scheduleRebuildForBlockArea((int) box.minX, (int) box.minY, (int) box.minZ, (int) box.maxX, (int) box.maxY, (int) box.maxZ, true);
+        // Only schedule a Sodium chunk rebuild when the player moves to a new block position.
+        // Box.expand() returns a new Box (immutable) — assign the result.
+        BlockPos currentPos = MinecraftClient.getInstance().player.getBlockPos();
+        if (!currentPos.equals(lastRebuildPos)) {
+            lastRebuildPos = currentPos;
+            double dub = 1.25 * Mod.getZoom() * Mod.zoomMetric;
+            Box box = new Box(MinecraftClient.getInstance().player.getEyePos(),
+                    MinecraftClient.getInstance().gameRenderer.getCamera().getPos())
+                    .expand(1, 0, 1)
+                    .expand(dub, dub, dub);
+            SodiumWorldRenderer.instance().scheduleRebuildForBlockArea(
+                    (int) box.minX, (int) box.minY, (int) box.minZ,
+                    (int) box.maxX, (int) box.maxY, (int) box.maxZ, true);
         }
 
         for(BlockCuller culler :blockCullers) {

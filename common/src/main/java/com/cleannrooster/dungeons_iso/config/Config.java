@@ -23,7 +23,7 @@ public class Config {
     @SerialEntry
     public boolean fogOfWar =  false;
     @SerialEntry
-    public float cullAngle = 3.0F;
+    public float cullAngle = 6.0F;
     @SerialEntry
     public float coneHalfAngle = 45.0F;
     @SerialEntry
@@ -40,7 +40,7 @@ public class Config {
     @SerialEntry
     public boolean turnToMouse =  true;
     @SerialEntry
-    public boolean clipToSpace =  true;
+    public boolean clipToSpace =  false;
 
     @SerialEntry
     public boolean additionalMeleeAssistance =  false;
@@ -71,5 +71,8 @@ public class Config {
 
     @SerialEntry
     public boolean showFirstTimeGui = true;
+
+    @SerialEntry
+    public float soundListenerBias = 0.66F;
 
 }

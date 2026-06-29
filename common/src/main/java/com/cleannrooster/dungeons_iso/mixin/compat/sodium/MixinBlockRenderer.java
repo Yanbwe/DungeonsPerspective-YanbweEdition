@@ -43,6 +43,10 @@ private  Vector3f posOffset ;
     private Vec3d posOffsetOffset = Vec3d.ZERO;
     private int timer = 10;
 
+    // Cached trig value — recomputed only when the config value changes.
+    private static float  cachedConeHalfAngle = Float.NaN;
+    private static double cachedTanHalfAngle  = 0.0;
+
     @Shadow
     private @Nullable ColorProvider<BlockState> colorProvider;
 
@@ -137,7 +141,12 @@ private  Vector3f posOffset ;
             double projDist = dot / axisLen;
 
             // Cone near player: half-angle from config, transitions to cylinder where cone meets full radius
-            double tanHalfAngle = Math.tan(Math.toRadians(Config.GSON.instance().coneHalfAngle));
+            float configHalfAngle = Config.GSON.instance().coneHalfAngle;
+            if (configHalfAngle != cachedConeHalfAngle) {
+                cachedConeHalfAngle = configHalfAngle;
+                cachedTanHalfAngle  = Math.tan(Math.toRadians(configHalfAngle));
+            }
+            double tanHalfAngle = cachedTanHalfAngle;
             double coneRadius = projDist * tanHalfAngle;
             double effectiveRadius = Math.min(coneRadius, radius);
 

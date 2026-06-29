@@ -194,6 +194,18 @@ public class ConfigScreen {
                                                 )
                                                 .controller(opt -> new FloatSliderControllerBuilderImpl(opt).range(0F, 1F).step(0.001F))
                                                 .build())
+                                        .option(Option
+                                                .<Float>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.bias.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.bias.description")))
+                                                .binding(
+                                                        defaults.soundListenerBias,
+                                                        () -> config.soundListenerBias,
+                                                        (value) -> config.soundListenerBias = value
+                                                )
+                                                .controller(opt -> new FloatSliderControllerBuilderImpl(opt).range(0F, 1F).step(0.001F))
+                                                .build())
                                         .build())
 
                                 // Controls

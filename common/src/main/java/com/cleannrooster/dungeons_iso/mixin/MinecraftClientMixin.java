@@ -638,7 +638,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
 
         if(client.player != null && Mod.enabled) {
 
-
             DragonCompat.getDragonDistanceMultiplier();
 
 

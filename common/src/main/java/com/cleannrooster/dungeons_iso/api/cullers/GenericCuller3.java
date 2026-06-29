@@ -58,6 +58,10 @@ public class GenericCuller3 implements BlockCuller {
         return (cx * cx + cy * cy + cz * cz) / axisLenSq;
     }
 
+    // Cached trig value — recomputed only when the config value changes.
+    private static float  cachedConeHalfAngle = Float.NaN;
+    private static double cachedTanHalfAngle  = 0.0;
+
     /**
      * Computes the animated cylinder radius based on the configured cullAngle and the transition ramp.
      */
@@ -77,7 +81,12 @@ public class GenericCuller3 implements BlockCuller {
         double axisLen = Math.sqrt(axisLenSq);
         double projDist = (toPoint.x * axis.x + toPoint.y * axis.y + toPoint.z * axis.z) / axisLen;
         // Cone near player: half-angle from config, transitions to cylinder where cone meets full radius
-        double tanHalfAngle = Math.tan(Math.toRadians(Config.GSON.instance().coneHalfAngle));
+        float configHalfAngle = Config.GSON.instance().coneHalfAngle;
+        if (configHalfAngle != cachedConeHalfAngle) {
+            cachedConeHalfAngle = configHalfAngle;
+            cachedTanHalfAngle  = Math.tan(Math.toRadians(configHalfAngle));
+        }
+        double tanHalfAngle = cachedTanHalfAngle;
         double coneRadius = projDist * tanHalfAngle;
         double effRadius = Math.min(coneRadius, radius);
         return effRadius * effRadius;
@@ -165,14 +174,13 @@ public class GenericCuller3 implements BlockCuller {
         return false;
     }
 
-    List<Class<? extends Block>> ignoredTypes = List.of(VaultBlock.class, SpawnerBlock.class, TrialSpawnerBlock.class, WallMountedBlock.class, LadderBlock.class, DoorBlock.class);
     public boolean isIgnoredType(Block block) {
-        for (Class<? extends Block> ignoredType : ignoredTypes) {
-            if (ignoredType.isInstance(block)) {
-                return true;
-            }
-        }
-        return false;
+        return block instanceof VaultBlock
+                || block instanceof SpawnerBlock
+                || block instanceof TrialSpawnerBlock
+                || block instanceof WallMountedBlock
+                || block instanceof LadderBlock
+                || block instanceof DoorBlock;
     }
 
     @Override

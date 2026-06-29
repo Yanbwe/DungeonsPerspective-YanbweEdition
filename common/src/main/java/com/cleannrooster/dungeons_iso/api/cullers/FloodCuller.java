@@ -12,8 +12,22 @@ import java.util.*;
 
 public class FloodCuller implements BlockCuller {
 
-    private HashSet<Long> floodXZSet = new HashSet<>();
+    // Per-column ceiling height: packed XZ -> highest air block Y visited in the flood.
+    // Blocks at Y > ceiling[xz] (and xz in the map) are culled.
+    private final HashMap<Long, Integer> floodXZCeilingMap = new HashMap<>();
     private int floodY;
+
+    // Reusable BFS structures — cleared each call, never reallocated.
+    private final HashSet<Long> visited = new HashSet<>();
+    // Manual primitive long stack — avoids one long[]{} allocation per node.
+    private long[] longStack = new long[1024];
+    private int stackTop = 0;
+
+    // Vertical range constants for 3D room exploration.
+    // Allow upward exploration up to this many blocks above floodY (covers tall ceilings).
+    private static final int MAX_VERTICAL_UP   = 24;
+    // Allow downward exploration for sunken floors and stairs.
+    private static final int MAX_VERTICAL_DOWN = 8;
 
     @Override
     public boolean shouldForceCull() {
@@ -36,7 +50,10 @@ public class FloodCuller implements BlockCuller {
     }
 
     public boolean shouldCull(BlockPos blockPos, Camera camera, Entity cameraEntity) {
-        return cameraEntity != null && Mod.shouldReload && cameraEntity.getWorld().getBlockState(blockPos).getCameraCollisionShape(cameraEntity.getWorld(), blockPos, ShapeContext.of(cameraEntity)).isEmpty();
+        return cameraEntity != null && Mod.shouldReload
+                && cameraEntity.getWorld().getBlockState(blockPos)
+                .getCameraCollisionShape(cameraEntity.getWorld(), blockPos, ShapeContext.of(cameraEntity))
+                .isEmpty();
     }
 
     @Override
@@ -44,14 +61,8 @@ public class FloodCuller implements BlockCuller {
         return false;
     }
 
-    List<Class<? extends Block>> ignoredTypes = List.of(WallMountedBlock.class, DoorBlock.class);
     public boolean isIgnoredType(Block block) {
-        for (Class<? extends Block> ignoredType : ignoredTypes) {
-            if (ignoredType.isInstance(block)) {
-                return true;
-            }
-        }
-        return false;
+        return block instanceof WallMountedBlock || block instanceof DoorBlock;
     }
 
     @Override
@@ -63,75 +74,103 @@ public class FloodCuller implements BlockCuller {
     public List<BlockPos> getCulledBlocks(BlockPos blockPos, Camera camera, Entity cameraEntity) {
         BlockPos startPos = cameraEntity.getBlockPos().up();
         floodY = startPos.getY();
+        int minY = floodY - MAX_VERTICAL_DOWN;
+        int maxY = floodY + MAX_VERTICAL_UP;
 
-        HashSet<Long> visited = new HashSet<>();
-        ArrayDeque<long[]> stack = new ArrayDeque<>();
-        List<BlockPos> builder = new ArrayList<>();
+        // Reuse collections — clear is O(n) but skips all GC pressure of reallocation.
+        visited.clear();
+        floodXZCeilingMap.clear();
+        stackTop = 0;
 
         double cullAngleRatio = Config.GSON.instance().cullAngle / 30.0;
-        double maxDist = 16.0 * cullAngleRatio;
-        double zoomDist = 0.1 * (Math.min(10, Math.min(cameraEntity.getWorld().getTime() - Mod.startTime + 2, 10 - Mod.endTime))) * Mod.getZoom() * Mod.zoomMetric * cullAngleRatio;
-        double maxDistSq = maxDist * maxDist;
+        double maxDist    = 16.0 * cullAngleRatio;
+        double zoomDist   = 0.1 * (Math.min(10, Math.min(
+                cameraEntity.getWorld().getTime() - Mod.startTime + 2,
+                10 - Mod.endTime)))
+                * Mod.getZoom() * Mod.zoomMetric * cullAngleRatio;
+        double maxDistSq  = maxDist  * maxDist;
         double zoomDistSq = zoomDist * zoomDist;
+
+        int entityX = cameraEntity.getBlockPos().getX();
+        int entityZ = cameraEntity.getBlockPos().getZ();
 
         int startX = startPos.getX();
         int startY = startPos.getY();
         int startZ = startPos.getZ();
-        int entityX = cameraEntity.getBlockPos().getX();
-        int entityZ = cameraEntity.getBlockPos().getZ();
 
         long startPacked = BlockPos.asLong(startX, startY, startZ);
-        stack.push(new long[]{startPacked});
+        pushStack(startPacked);
         visited.add(startPacked);
 
         BlockPos.Mutable mutable = new BlockPos.Mutable();
 
-        while (!stack.isEmpty()) {
-            long packed = stack.pop()[0];
+        // 6-directional offsets: ±X, ±Z (horizontal), ±Y (vertical)
+        // Stored as flat int pairs: {dx, dy, dz} — use 3-element int arrays.
+        // To avoid allocating these every call, define them as a constant.
+        while (stackTop > 0) {
+            long packed = longStack[--stackTop];
             int x = BlockPos.unpackLongX(packed);
             int y = BlockPos.unpackLongY(packed);
             int z = BlockPos.unpackLongZ(packed);
 
-            mutable.set(x, y, z);
-            builder.add(mutable.toImmutable());
+            // Update ceiling map: track highest air-block Y seen at this XZ column.
+            long xz = packXZ(x, z);
+            Integer prev = floodXZCeilingMap.get(xz);
+            if (prev == null || y > prev) {
+                floodXZCeilingMap.put(xz, y);
+            }
 
             double dx = x - entityX;
             double dz = z - entityZ;
             double distSq = dx * dx + dz * dz;
 
             if (distSq <= maxDistSq && distSq <= zoomDistSq) {
-                // Check 4 neighbors
-                int[][] offsets = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
-                for (int[] off : offsets) {
-                    int nx = x + off[0];
-                    int nz = z + off[1];
-                    long neighborPacked = BlockPos.asLong(nx, y, nz);
-                    if (!visited.contains(neighborPacked)) {
-                        visited.add(neighborPacked);
-                        mutable.set(nx, y, nz);
-                        if (this.shouldCull(mutable, camera, cameraEntity)) {
-                            stack.push(new long[]{neighborPacked});
-                        }
-                    }
-                }
+                // Horizontal neighbors
+                tryNeighbor(x + 1, y, z, camera, cameraEntity, mutable);
+                tryNeighbor(x - 1, y, z, camera, cameraEntity, mutable);
+                tryNeighbor(x, y, z + 1, camera, cameraEntity, mutable);
+                tryNeighbor(x, y, z - 1, camera, cameraEntity, mutable);
+                // Vertical neighbors — bounded to prevent sky/void escapes
+                if (y + 1 <= maxY) tryNeighbor(x, y + 1, z, camera, cameraEntity, mutable);
+                if (y - 1 >= minY) tryNeighbor(x, y - 1, z, camera, cameraEntity, mutable);
             }
         }
 
-        // Build the O(1) lookup set for isAboveFlood
-        floodXZSet = new HashSet<>(visited.size());
-        for (BlockPos pos : builder) {
-            floodXZSet.add(packXZ(pos.getX(), pos.getZ()));
-        }
+        // getCulledBlocks() return value is stored in SodiumCompat.stream but never consumed.
+        // Return empty list to avoid the old per-position toImmutable() allocations.
+        return List.of();
+    }
 
-        return builder;
+    private void tryNeighbor(int nx, int ny, int nz, Camera camera, Entity cameraEntity, BlockPos.Mutable mutable) {
+        long neighborPacked = BlockPos.asLong(nx, ny, nz);
+        if (!visited.contains(neighborPacked)) {
+            visited.add(neighborPacked);
+            mutable.set(nx, ny, nz);
+            if (shouldCull(mutable, camera, cameraEntity)) {
+                pushStack(neighborPacked);
+            }
+        }
+    }
+
+    private void pushStack(long value) {
+        if (stackTop == longStack.length) {
+            longStack = Arrays.copyOf(longStack, longStack.length * 2);
+        }
+        longStack[stackTop++] = value;
     }
 
     @Override
     public void resetCulledBlocks() {
     }
 
+    /**
+     * Returns true if the given block position is above the ceiling of the connected
+     * air-space the player occupies at its XZ column. Such blocks should be culled.
+     */
     public boolean isAboveFlood(BlockPos blockPos) {
-        return blockPos.getY() > floodY && floodXZSet.contains(packXZ(blockPos.getX(), blockPos.getZ()));
+        long xz = packXZ(blockPos.getX(), blockPos.getZ());
+        Integer ceiling = floodXZCeilingMap.get(xz);
+        return ceiling != null && blockPos.getY() > ceiling;
     }
 
     private static long packXZ(int x, int z) {

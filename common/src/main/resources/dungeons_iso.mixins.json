@@ -17,28 +17,19 @@
     "client.PlayerEntityMixin",
     "GameOptionsMixin",
     "AbstractSoundInstanceMixin",
+    "SoundSystemMixin",
     "AbstractHorseEntityMixin",
     "LightmapTextureManagerMixin",
     "BackgroundRendererMixin",
-    "LightingProviderMixin",
-    "WrapperProtoChunkMixin",
-    "WorldMixin",
-    "ClientWorldMixin",
-    "ChunkDataMixin",
-    "ClientPlayerEntityMixin",
     "BossBarHudMixin",
     "compat.sodium.MixinBlockRenderer",
-    "compat.sodium.SodiumWorldRendererMixin",
     "compat.sodium.AbstractRenderContextMixin",
     "compat.sodium.AbstractRenderContextMixin2",
-    "compat.sodium.FluidRendererMixin",
     "compat.sodium.RenderSectionManagerMixin",
-    "RenderSystemMixin",
     "KeyBindingMixin"
 
   ],
   "server": [
-    "server.PlayerEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
