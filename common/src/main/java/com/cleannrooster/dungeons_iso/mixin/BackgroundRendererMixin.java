@@ -1,5 +1,6 @@
 package com.cleannrooster.dungeons_iso.mixin;
 
+import com.cleannrooster.dungeons_iso.config.Config;
 import com.cleannrooster.dungeons_iso.mod.Mod;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
@@ -41,7 +42,7 @@ public class BackgroundRendererMixin {
     }
         @Inject(method = "applyFog", at = @At("TAIL"), cancellable = true)
     private static void applyFogFogOfWarEND(Camera camera, BackgroundRenderer.FogType fogType, float viewDistance, boolean thickFog, float tickDelta, CallbackInfo ci) {
-        if(Mod.enabled){
+        if(Mod.enabled && Config.GSON.instance().distanceFog){
             var flot = (Mod.zoomMetric*(Mod.getZoom()+1) +(float)scal);
             RenderSystem.setShaderFogStart(flot*1.5F);
             RenderSystem.setShaderFogEnd(flot*3F);

@@ -290,6 +290,30 @@ public class ConfigScreen {
                                                 .build())
                                         .option(Option
                                                 .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.distanceFog.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.distanceFog.description")))
+                                                .binding(
+                                                        defaults.distanceFog,
+                                                        () -> config.distanceFog,
+                                                        (value) -> config.distanceFog = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.renderDistanceCap.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.renderDistanceCap.description")))
+                                                .binding(
+                                                        defaults.renderDistanceCap,
+                                                        () -> config.renderDistanceCap,
+                                                        (value) -> config.renderDistanceCap = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
                                                 .name(Text.translatable("dungeons_iso.config.frustumCulling.name"))
                                                 .description(OptionDescription.of(Text.translatable(
                                                         "dungeons_iso.config.frustumCulling.description")))
