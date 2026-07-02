@@ -79,6 +79,11 @@ import static com.cleannrooster.dungeons_iso.mod.Mod.*;
 public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
     private boolean canUseItem;
 
+    // Per-tick exponential smoothing factor for the player's cosmetic pitch (see lookAt()).
+    // Runs at the fixed 20 TPS tick; ~0.35 reaches the target in a few ticks while easing out
+    // snap transitions. Lower = smoother/laggier, higher = snappier.
+    private static final float PITCH_SMOOTHING = 0.35f;
+
     @Shadow
     private int itemUseCooldown;
     private Vec3d originalLocation;
@@ -344,7 +349,26 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                             lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, result.getPos(),true);
 
                         }else {
-                            lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, crosshairTarget.getPos(),true);
+                            // Cosmetic look target: flatten to eye level so the character doesn't
+                            // crane up at overhead blocks (forest canopy) in normal mouse-look.
+                            // Vertical look is kept for entities, while aiming/casting, and for
+                            // blocks worth acting on (right tool to harvest, or interactable).
+                            // Interaction targeting is decoupled (see GameRendererMixin), so this
+                            // never affects where actions land.
+                            Vec3d lookTarget = crosshairTarget.getPos();
+                            boolean allowVertical = spell || client.player.isUsingItem()
+                                    || crosshairTarget instanceof EntityHitResult;
+                            if (!allowVertical && crosshairTarget instanceof BlockHitResult blockHit && client.world != null) {
+                                BlockState state = client.world.getBlockState(blockHit.getBlockPos());
+                                if (!state.isAir() && (client.player.getMainHandStack().getMiningSpeedMultiplier(state) > 1.5f
+                                        || Mod.isInteractable(blockHit))) {
+                                    allowVertical = true;
+                                }
+                            }
+                            if (!allowVertical) {
+                                lookTarget = new Vec3d(lookTarget.x, client.player.getEyePos().y, lookTarget.z);
+                            }
+                            lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, lookTarget,true);
                         }
 
                         /*
@@ -472,7 +496,13 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         }
 
         living.setHeadYaw((float) headyaw);
-        living.setPitch(MathHelper.wrapDegrees((float)(-(MathHelper.atan2(e, g) * 57.2957763671875))));
+
+        // Ease pitch toward its target over a few ticks instead of snapping. Even with the
+        // eye-level look target, pitch can still step when the player starts/stops aiming or a
+        // genuine vertical target is picked; exponential smoothing at the fixed 20 TPS tick makes
+        // those glide. The renderer's prevPitch->pitch interpolation covers per-frame smoothness.
+        float targetPitch = MathHelper.wrapDegrees((float)(-(MathHelper.atan2(e, g) * 57.2957763671875)));
+        living.setPitch(MathHelper.lerpAngleDegrees(PITCH_SMOOTHING, living.getPitch(), targetPitch));
 
         boolean spell = false;
         if (ModCompat.isModLoaded("spell_engine")) {
@@ -816,7 +846,26 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
 
                     if (!player.isFallFlying()) {
 
-                        lookAt(client.player,EntityAnchorArgumentType.EntityAnchor.EYES, crosshairTarget.getPos(),true);
+                        // Cosmetic look target: flatten to eye level so the character doesn't crane
+                        // up at overhead blocks (forest canopy) in normal mouse-look. Vertical look
+                        // is kept for entities, while aiming/casting, and for blocks worth acting on
+                        // (the held item is the right tool to harvest it, or it is interactable).
+                        // Interaction targeting is decoupled (see GameRendererMixin), so this never
+                        // affects where actions actually land.
+                        Vec3d lookTarget = crosshairTarget.getPos();
+                        boolean allowVertical = spell || client.player.isUsingItem()
+                                || crosshairTarget instanceof EntityHitResult;
+                        if (!allowVertical && crosshairTarget instanceof BlockHitResult blockHit && client.world != null) {
+                            BlockState state = client.world.getBlockState(blockHit.getBlockPos());
+                            if (!state.isAir() && (client.player.getMainHandStack().getMiningSpeedMultiplier(state) > 1.5f
+                                    || Mod.isInteractable(blockHit))) {
+                                allowVertical = true;
+                            }
+                        }
+                        if (!allowVertical) {
+                            lookTarget = new Vec3d(lookTarget.x, client.player.getEyePos().y, lookTarget.z);
+                        }
+                        lookAt(client.player,EntityAnchorArgumentType.EntityAnchor.EYES, lookTarget,true);
                     }
 
 
