@@ -26,7 +26,8 @@
     "compat.sodium.AbstractRenderContextMixin",
     "compat.sodium.AbstractRenderContextMixin2",
     "compat.sodium.RenderSectionManagerMixin",
-    "KeyBindingMixin"
+    "KeyBindingMixin",
+    "WorldRendererMixin"
 
   ],
   "server": [

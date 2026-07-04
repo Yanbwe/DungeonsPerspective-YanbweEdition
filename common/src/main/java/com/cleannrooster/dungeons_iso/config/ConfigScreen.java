@@ -30,6 +30,18 @@ public class ConfigScreen {
                                         .name(Text.translatable("dungeons_iso.config.group.general"))
                                         .option(Option
                                                 .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.controllerMode.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.controllerMode.description")))
+                                                .binding(
+                                                        defaults.controllerMode,
+                                                        () -> config.controllerMode,
+                                                        (value) -> config.controllerMode = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
                                                 .name(Text.translatable("dungeons_iso.config.force.name"))
                                                 .description(OptionDescription.of(Text.translatable(
                                                         "dungeons_iso.config.force.description")))
@@ -107,6 +119,18 @@ public class ConfigScreen {
                                                         defaults.cameraRelative,
                                                         () -> config.cameraRelative,
                                                         (value) -> config.cameraRelative = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.joystickMovement.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.joystickMovement.description")))
+                                                .binding(
+                                                        defaults.joystickMovement,
+                                                        () -> config.joystickMovement,
+                                                        (value) -> config.joystickMovement = value
                                                 )
                                                 .controller(BooleanControllerBuilder::create)
                                                 .build())
@@ -268,6 +292,42 @@ public class ConfigScreen {
                                                         defaults.additionalMeleeAssistance,
                                                         () -> config.additionalMeleeAssistance,
                                                         (value) -> config.additionalMeleeAssistance = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.contextualTargeting.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.contextualTargeting.description")))
+                                                .binding(
+                                                        defaults.contextualTargeting,
+                                                        () -> config.contextualTargeting,
+                                                        (value) -> config.contextualTargeting = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.movementTargeting.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.movementTargeting.description")))
+                                                .binding(
+                                                        defaults.movementTargeting,
+                                                        () -> config.movementTargeting,
+                                                        (value) -> config.movementTargeting = value
+                                                )
+                                                .controller(BooleanControllerBuilder::create)
+                                                .build())
+                                        .option(Option
+                                                .<Boolean>createBuilder()
+                                                .name(Text.translatable("dungeons_iso.config.contextualInteract.name"))
+                                                .description(OptionDescription.of(Text.translatable(
+                                                        "dungeons_iso.config.contextualInteract.description")))
+                                                .binding(
+                                                        defaults.contextualInteract,
+                                                        () -> config.contextualInteract,
+                                                        (value) -> config.contextualInteract = value
                                                 )
                                                 .controller(BooleanControllerBuilder::create)
                                                 .build())

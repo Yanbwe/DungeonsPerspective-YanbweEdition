@@ -149,7 +149,7 @@ public class ClientInit {
         com.cleannrooster.dungeons_iso.config.FirstTimeState.load();
     }
 
-    private static void drawCuboidShapeOutline(MatrixStack matrices, VertexConsumer vertexConsumer, VoxelShape shape, double offsetX, double offsetY, double offsetZ, float red, float green, float blue, float alpha) {
+    public static void drawCuboidShapeOutline(MatrixStack matrices, VertexConsumer vertexConsumer, VoxelShape shape, double offsetX, double offsetY, double offsetZ, float red, float green, float blue, float alpha) {
         MatrixStack.Entry entry = matrices.peek();
         shape.forEachEdge((minX, minY, minZ, maxX, maxY, maxZ) -> {
             float k = (float)(maxX - minX);

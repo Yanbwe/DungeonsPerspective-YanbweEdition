@@ -16,6 +16,16 @@ public class Config {
     @SerialEntry
     public boolean XIV =  false;
 
+    /**
+     * "Controller mode" master toggle. When on, it forces a controller/one-handed-friendly preset,
+     * overriding the individual toggles below at their behavior read sites (the stored values are
+     * left untouched so turning Controller mode back off restores them):
+     * turn-to-mouse OFF, contextual targeting ON, movement-based targeting ON, contextual block
+     * interaction ON, click-to-move OFF, roll-towards-cursor (Combat Roll compat) OFF.
+     */
+    @SerialEntry
+    public boolean controllerMode =  false;
+
     @SerialEntry
     public boolean onStartup =  true;
     @SerialEntry
@@ -41,6 +51,14 @@ public class Config {
     @SerialEntry
     public boolean cameraRelative =  true;
 
+    /**
+     * Native gamepad left-stick movement. When on (and a controller is connected) the left
+     * analog stick drives movement through the same camera-relative pipeline as WASD; while the
+     * stick is deflected past the deadzone it overrides the keyboard for that tick.
+     */
+    @SerialEntry
+    public boolean joystickMovement =  true;
+
     @SerialEntry
     public boolean turnToMouse =  true;
     @SerialEntry
@@ -48,6 +66,12 @@ public class Config {
 
     @SerialEntry
     public boolean additionalMeleeAssistance =  false;
+    @SerialEntry
+    public boolean contextualTargeting =  false;
+    @SerialEntry
+    public boolean movementTargeting =  false;
+    @SerialEntry
+    public boolean contextualInteract =  false;
     @SerialEntry
     public boolean forceAutoJump =  true;
     @SerialEntry
@@ -79,4 +103,41 @@ public class Config {
     @SerialEntry
     public float soundListenerBias = 0.66F;
 
+    // --- Effective accessors -----------------------------------------------------------------
+    // Read these (not the raw fields) at behavior sites so "Controller mode" can override them.
+
+    /** Turn-to-mouse facing; forced OFF in Controller mode (movement drives facing instead). */
+    public boolean isTurnToMouse() {
+        return !controllerMode && turnToMouse;
+    }
+
+    /** Click-to-move; forced OFF in Controller mode. */
+    public boolean isClickToMove() {
+        return !controllerMode && clickToMove;
+    }
+
+    /** Contextual combat targeting; forced ON in Controller mode. */
+    public boolean isContextualTargeting() {
+        return controllerMode || contextualTargeting;
+    }
+
+    /** Movement-based contextual targeting; forced ON in Controller mode. */
+    public boolean isMovementTargeting() {
+        return controllerMode || movementTargeting;
+    }
+
+    /** Contextual interactable-block targeting; forced ON in Controller mode. */
+    public boolean isContextualInteract() {
+        return controllerMode || contextualInteract;
+    }
+
+    /** Combat Roll compat "roll towards cursor"; forced OFF in Controller mode. */
+    public boolean isRollTowardsCursor() {
+        return !controllerMode && rollTowardsCursor;
+    }
+
+    /** Native gamepad left-stick movement; forced ON in Controller mode. */
+    public boolean isJoystickMovement() {
+        return controllerMode || joystickMovement;
+    }
 }

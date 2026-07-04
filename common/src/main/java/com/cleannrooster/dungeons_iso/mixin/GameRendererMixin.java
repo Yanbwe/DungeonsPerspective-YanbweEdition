@@ -158,6 +158,24 @@ public abstract class GameRendererMixin {
         if (!Mod.enabled || client.player == null || client.world == null) {
             return;
         }
+        Vec3d playerEye = client.player.getEyePos();
+
+        // When contextual combat targeting has acquired an entity, make the interaction hit result
+        // point at that entity too — so vanilla attacks/interactions land on the same enemy the
+        // character faces, not just the cosmetic facing. Gated by the same reach + line-of-sight
+        // check as any other target; if the contextual target is out of reach or occluded, fall
+        // through to the normal cursor-based result below.
+        if (Config.GSON.instance().isContextualTargeting()
+                && Mod.targeted instanceof LivingEntity contextTarget && contextTarget.isAlive()) {
+            EntityHitResult contextHit = new EntityHitResult(contextTarget, contextTarget.getEyePos());
+            if (client.player.canInteractWithEntity(contextTarget, 0.0)
+                    && !isOccludedFromEye(client, playerEye, contextHit.getPos(), null)) {
+                client.crosshairTarget = contextHit;
+                client.targetedEntity = contextTarget;
+                return;
+            }
+        }
+
         HitResult target = Mod.crosshairTarget;
         if (target == null) {
             return;

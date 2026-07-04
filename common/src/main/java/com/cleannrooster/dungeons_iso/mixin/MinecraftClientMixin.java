@@ -7,6 +7,7 @@ import com.cleannrooster.dungeons_iso.compat.MidnightControlsCompat;
 import com.cleannrooster.dungeons_iso.compat.SodiumCompat;
 import com.cleannrooster.dungeons_iso.config.Config;
 import com.cleannrooster.dungeons_iso.ui.LootUI;
+import com.cleannrooster.dungeons_iso.util.InteractionTargeting;
 import com.google.common.collect.Lists;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.minecraft.block.*;
@@ -62,6 +63,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.cleannrooster.dungeons_iso.ClientInit;
 import com.cleannrooster.dungeons_iso.compat.SpellEngineCompat;
 import com.cleannrooster.dungeons_iso.mod.Mod;
+import com.cleannrooster.dungeons_iso.util.ContextualInteractionTargeting;
+import com.cleannrooster.dungeons_iso.util.ContextualTargeting;
 import com.cleannrooster.dungeons_iso.util.Util;
 
 import java.util.ArrayList;
@@ -84,10 +87,16 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
     // snap transitions. Lower = smoother/laggier, higher = snappier.
     private static final float PITCH_SMOOTHING = 0.35f;
 
+    // Movement-targeting: ticks of continuous non-combat input after which the soft target is
+    // cleared (bridges brief gaps between attacks/casts so the target isn't dropped mid-combat).
+    private static final int MOVEMENT_TARGET_IDLE_CLEAR_TICKS = 40;
+    private int idleTargetTicks;
+
     @Shadow
     private int itemUseCooldown;
     private Vec3d originalLocation;
     private boolean hasClicked;
+    private Vec3d moveDir;
 
     @Override
     public boolean shouldRebuild() {
@@ -191,7 +200,29 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
             if(ClientInit.rotateToggle.wasPressed()){
                 rotateToggle = !rotateToggle;
             }
-            if(  ClientInit.clickToMove.isPressed() && Config.GSON.instance().clickToMove) {
+
+            // Contextual interactable-block targeting. Independent of combat targets and of the
+            // mouse hit result: it only chooses a nearby usable block to highlight and lets the
+            // Interact key act on it. Runs before click-to-move so the key is always processed.
+            if (Config.GSON.instance().isContextualInteract()) {
+                if (client.currentScreen == null) {
+                    ContextualTargeting.TargetingInputMode interactInputMode = Config.GSON.instance().isMovementTargeting()
+                            ? ContextualTargeting.TargetingInputMode.MOVEMENT
+                            : ContextualTargeting.TargetingInputMode.POINTER;
+                    Vec3d interactDir = interactInputMode == ContextualTargeting.TargetingInputMode.MOVEMENT
+                            ? getMovementTargetingDirection(client)
+                            : getPointerTargetingDirection(client.player, Mod.crosshairTarget);
+                    Mod.targetedInteractable = ContextualInteractionTargeting.updateTarget(
+                            client.player, interactDir, Mod.targetedInteractable, interactInputMode);
+                } else {
+                    Mod.targetedInteractable = null;
+                }
+                while (ClientInit.interact.wasPressed()) {
+                    tryUseTargetedInteractable(client);
+                }
+            }
+
+            if(  ClientInit.clickToMove.isPressed() && Config.GSON.instance().isClickToMove()) {
 
                 if (  (Mod.crosshairTarget instanceof BlockHitResult hit &&  isInteractable(hit))){
                     Hand[] var1 = Hand.values();
@@ -246,7 +277,7 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
 
 
             boolean bool = false;
-            if(!player.isFallFlying() && this.location != null && Config.GSON.instance().clickToMove){
+            if(!player.isFallFlying() && this.location != null && Config.GSON.instance().isClickToMove()){
                 Vec3d vec3d2 = new Vec3d((double)this.player.sidewaysSpeed, (double)this.player.upwardSpeed, (double)this.player.forwardSpeed);
 
 
@@ -293,13 +324,101 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
             ){
                 bool2 = true;
             }
+
+            // Contextual combat target acquisition. Decides Mod.targeted (the soft combat-facing
+            // target); the facing logic below then aims the character at it. Off by default and
+            // fully skipped when disabled, so legacy targeting is untouched. The acquisition
+            // direction comes from either the top-down cursor (POINTER) or movement input
+            // (MOVEMENT) — the latter for controller / one-handed / keyboard-only play.
+            if (Config.GSON.instance().isContextualTargeting()) {
+                boolean rangedMode =
+                        client.player.getMainHandStack().getItem() instanceof RangedWeaponItem ||
+                        client.player.getMainHandStack().getItem() instanceof ProjectileItem ||
+                        client.player.getMainHandStack().getItem() instanceof BowItem ||
+                        client.player.getMainHandStack().getItem() instanceof CrossbowItem ||
+                        client.player.isUsingItem() ||
+                        spell;
+                boolean meleeMode = (client.options.attackKey.isPressed() || mouseCooldown > 0 ) && !rangedMode;
+                ContextualTargeting.TargetingMode combatMode = rangedMode
+                        ? ContextualTargeting.TargetingMode.RANGED
+                        : (meleeMode ? ContextualTargeting.TargetingMode.MELEE
+                                     : ContextualTargeting.TargetingMode.NONE);
+
+                ContextualTargeting.TargetingInputMode inputMode = Config.GSON.instance().isMovementTargeting()
+                        ? ContextualTargeting.TargetingInputMode.MOVEMENT
+                        : ContextualTargeting.TargetingInputMode.POINTER;
+
+                Vec3d acquisitionDirection = inputMode == ContextualTargeting.TargetingInputMode.MOVEMENT
+                        ? getMovementTargetingDirection(client)
+                        : getPointerTargetingDirection(client.player, Mod.crosshairTarget);
+
+                if (ContextualTargeting.isValidLockOn(client.player, Mod.lockOnTarget)) {
+                    // Explicit hard lock-on overrides contextual soft targeting.
+                    Mod.targeted = Mod.lockOnTarget;
+                    idleTargetTicks = 0;
+                } else {
+                    Mod.lockOnTarget = null;
+                    if (combatMode != ContextualTargeting.TargetingMode.NONE) {
+                        idleTargetTicks = 0;
+                        Mod.targeted = ContextualTargeting.updateTarget(
+                                client.player, acquisitionDirection, Mod.targeted, combatMode, inputMode);
+                    } else if (Config.GSON.instance().isContextualInteract()) {
+                        // Out of combat: target nearby interactable entities (villagers, traders) so
+                        // the Interact key can act on them (and the character faces/highlights them).
+                        idleTargetTicks = 0;
+                        Mod.targeted = ContextualTargeting.updateTarget(
+                                client.player, acquisitionDirection, Mod.targeted,
+                                ContextualTargeting.TargetingMode.INTERACT, inputMode);
+                    } else {
+                        handleTargetIdleState(inputMode);
+                    }
+                }
+                // Keep the TAIL tick's pickCooldown reaper from clearing a live soft target.
+                if (Mod.targeted != null) {
+                    pickCooldown = 20;
+                }
+            }
+
+            // Cursor-aim exception: even with turn-to-mouse off, projectile weapons and spell casts
+            // still need to aim somewhere. Contextual combat targeting normally supplies that aim by
+            // facing an acquired entity; when it can't (either targeting mode is off), a held ranged
+            // weapon / spell cast falls back to aiming at the cursor. This is suppressed in full
+            // movement/controller targeting (contextual + movement both on), which aims via the
+            // movement stick and has no meaningful cursor. Combat-target facing still takes priority.
+            boolean rangedHeld =
+                    client.player.getMainHandStack().getItem() instanceof RangedWeaponItem // bows, crossbows
+                    || client.player.getMainHandStack().getItem() instanceof ProjectileItem  // snowballs, eggs, pearls, potions
+                    || client.player.getMainHandStack().getItem() instanceof TridentItem;
+            boolean cursorAimException = (rangedHeld || spell)
+                    && (!Config.GSON.instance().isContextualTargeting()
+                        || !Config.GSON.instance().isMovementTargeting());
+
+            // "Move-facing regime": turn-to-mouse is disabled, the player is not elytra-flying, and
+            // the cursor-aim exception does not apply. In this regime the character NEVER looks at
+            // the cursor — facing is driven only by the combat target or movement. While moving it
+            // faces the movement direction; while standing still it keeps its current facing (looks
+            // forward). This holds even while attacking or using an item. Fall-flying is excluded so
+            // elytra steering (which uses look direction) still works.
+            boolean moveFacingRegime = !Config.GSON.instance().isTurnToMouse() && !player.isFallFlying()
+                    && !cursorAimException;
+
+            // Anchor the renderer's rotation-interpolation state to the CURRENT rotation. The TAIL
+            // tick copies these living* values into player.prev{Pitch,HeadYaw,BodyYaw} every tick;
+            // if the facing logic below decides not to rotate (idle in no-turn-to-mouse mode, e.g.
+            // right after switching into the perspective), leaving them stale makes the renderer
+            // lerp stale→current each tick → the model jitters until you move. lookAt() overwrites
+            // these with the same current values when it runs, so this is a no-op in that case.
+            Mod.livingYaw = client.player.getYaw();
+            Mod.livingPitch = client.player.getPitch();
+            Mod.livingHeadYaw = client.player.getHeadYaw();
+            Mod.livingBodyYaw = client.player.bodyYaw;
+
             if(Mod.targeted != null && !targeted.isInvisibleTo(client.player) && client.player.canSee(targeted)) {
                 EntityHitResult result = new EntityHitResult(targeted,targeted.getEyePos());
                 lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, result.getPos(),true);
 
             }else
-                if (((!Config.GSON.instance().turnToMouse && !player.isFallFlying()) && (
-                         !(bool ) && !using && mouseCooldown <= 0 && !(player.getMainHandStack().getItem() instanceof CrossbowItem item )&& ( client.player.input.getMovementInput().length() > 0.1)))) {
+                if (moveFacingRegime && client.player.input.getMovementInput().length() > 0.1) {
                     if(Mod.targeted != null){
                         EntityHitResult result = new EntityHitResult(targeted,targeted.getEyePos());
                         lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, result.getPos(),true);
@@ -319,10 +438,24 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                                           - (client.options.backKey.isPressed()    ? 1f : 0f);
                             float rawSide = (client.options.leftKey.isPressed()    ? 1f : 0f)
                                           - (client.options.rightKey.isPressed()   ? 1f : 0f);
+                            // No movement key held but the left stick is deflected: face the stick
+                            // direction (keys take priority). Mod.joystickRaw* is in the same
+                            // key-input convention as rawFwd/rawSide.
+                            if (rawFwd == 0 && rawSide == 0
+                                    && (Mod.joystickRawFwd != 0 || Mod.joystickRawSide != 0)) {
+                                rawFwd  = Mod.joystickRawFwd;
+                                rawSide = Mod.joystickRawSide;
+                            }
                             if (rawFwd != 0 || rawSide != 0) {
-                                Vec3d moveDir = movementInputToVelocity(new Vec3d(rawSide, 0, rawFwd), 1.0F, Mod.yaw);
+                                 moveDir = movementInputToVelocity(new Vec3d(rawSide, 0, rawFwd), 1.0F, Mod.yaw);
                                 lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES,
                                        client.player.getEyePos().add(moveDir), true);
+                            }
+                            else{
+                                if(moveDir != null){
+                                    lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES,
+                                            client.player.getEyePos().add(moveDir), true);
+                                }
                             }
                         }
                     }
@@ -348,7 +481,13 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                             EntityHitResult result = new EntityHitResult(targeted,targeted.getEyePos());
                             lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, result.getPos(),true);
 
-                        }else {
+                        }else if (Config.GSON.instance().isTurnToMouse() || player.isFallFlying() || cursorAimException) {
+                            // Face the cursor when turn-to-mouse is enabled, while elytra-flying (so
+                            // steering works), or under the cursor-aim exception (aiming a ranged
+                            // weapon / spell with no movement-based aim assist). Otherwise, with
+                            // turn-to-mouse off, the character never looks at the cursor — movement/
+                            // target facing above governs it, and standing still keeps the facing.
+                            //
                             // Cosmetic look target: flatten to eye level so the character doesn't
                             // crane up at overhead blocks (forest canopy) in normal mouse-look.
                             // Vertical look is kept for entities, while aiming/casting, and for
@@ -412,6 +551,7 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
 
             Mod.crosshairTarget = null;
             Mod.prevCrosshairTarget = null;
+            Mod.targetedInteractable = null;
         }
 
         if(MinecraftClient.getInstance().world != null && MinecraftClient.getInstance().world.getTime()-Mod.dirtyTime > 40) {
@@ -457,6 +597,121 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         }
 
     }
+    /**
+     * Pointer-mode acquisition direction: horizontal world direction from the eyes to the cursor's
+     * world position. Returns null when there is no usable cursor direction.
+     */
+    private Vec3d getPointerTargetingDirection(ClientPlayerEntity player, HitResult mouseTarget) {
+        if (mouseTarget == null) {
+            return null;
+        }
+        Vec3d flat = mouseTarget.getPos().subtract(player.getEyePos()).multiply(1.0, 0.0, 1.0);
+        return flat.lengthSquared() < 1.0e-6 ? null : flat.normalize();
+    }
+
+    /**
+     * Movement-mode acquisition direction: camera-relative world direction from the player's raw
+     * movement input (keyboard or controller analog stick), reusing the same conversion the
+     * movement-facing logic uses. Deliberately NOT physical velocity, which lags, slides, and is
+     * perturbed by knockback. Returns {@link Vec3d#ZERO} inside the neutral deadzone.
+     */
+    private Vec3d getMovementTargetingDirection(MinecraftClient client) {
+        // input.movementSideways/Forward is the active input implementation's normalized movement
+        // vector, so controllers are supported without special-casing.
+        Vec3d raw = new Vec3d(client.player.input.movementSideways, 0, client.player.input.movementForward);
+        if (raw.lengthSquared() < 0.04) {
+            return Vec3d.ZERO;
+        }
+        return movementInputToVelocity(raw, 1.0F, Mod.yaw).normalize();
+    }
+
+    /**
+     * Handle a tick with no combat action. Pointer mode clears the soft target immediately (mouse
+     * aiming re-acquires instantly). Movement mode retains it across brief gaps between attacks/
+     * casts and only clears after a sustained idle window; a dead/removed target is dropped at once.
+     * Explicit lock-on is never cleared here.
+     */
+    private void handleTargetIdleState(ContextualTargeting.TargetingInputMode inputMode) {
+        if (inputMode == ContextualTargeting.TargetingInputMode.MOVEMENT) {
+            if (Mod.targeted instanceof LivingEntity l && (!l.isAlive() || l.isRemoved())) {
+                Mod.targeted = null;
+                ContextualTargeting.clearSoftTarget();
+                idleTargetTicks = 0;
+                return;
+            }
+            idleTargetTicks++;
+            if (idleTargetTicks >= MOVEMENT_TARGET_IDLE_CLEAR_TICKS) {
+                Mod.targeted = null;
+                ContextualTargeting.clearSoftTarget();
+            }
+        } else {
+            Mod.targeted = null;
+        }
+    }
+
+    /**
+     * Perform a normal vanilla interaction on the contextual interactable target when the Interact
+     * key is pressed. Priority: the retained {@link Mod#targetedInteractable}; else the mouse
+     * hit result if it is an interactable block in range; else one immediate contextual scan. Does
+     * nothing (no walking, no packets) when no in-range target is found. Uses
+     * {@link net.minecraft.client.network.ClientPlayerInteractionManager#interactBlock} — never
+     * {@code doItemUse()} (which would use the crosshair target) and never custom packets.
+     */
+    private void tryUseTargetedInteractable(MinecraftClient client) {
+        if (client.player == null || client.world == null
+                || client.interactionManager == null || client.currentScreen != null) {
+            return;
+        }
+        // An interactable entity target (villager/trader acquired out of combat) takes priority when
+        // it is in reach — vanilla entity interaction, no walking, no custom packets.
+        if (Mod.targeted instanceof LivingEntity entity
+                && ContextualTargeting.isInteractableEntity(entity)
+                && client.player.canInteractWithEntity(entity, 0.0)) {
+            for (Hand hand : Hand.values()) {
+                var result = client.interactionManager.interactEntity(client.player, entity, hand);
+                if (result.isAccepted()) {
+                    if (result.shouldSwingHand()) {
+                        client.player.swingHand(hand);
+                    }
+                    itemUseCooldown = 4;
+                    return;
+                }
+            }
+        }
+        BlockHitResult hitResult = null;
+        if (Mod.targetedInteractable != null && InteractionTargeting.isInteractable(client.player.clientWorld, Mod.targetedInteractable)) {
+            hitResult = ContextualInteractionTargeting.resolveHit(client.player, Mod.targetedInteractable);
+        } else if (Mod.crosshairTarget instanceof BlockHitResult crossHit
+                && crossHit.getType() == HitResult.Type.BLOCK && InteractionTargeting.isInteractable(client.player.clientWorld,crossHit.getBlockPos())) {
+            hitResult = crossHit;
+        } else {
+            ContextualTargeting.TargetingInputMode inputMode = Config.GSON.instance().isMovementTargeting()
+                    ? ContextualTargeting.TargetingInputMode.MOVEMENT
+                    : ContextualTargeting.TargetingInputMode.POINTER;
+            Vec3d dir = inputMode == ContextualTargeting.TargetingInputMode.MOVEMENT
+                    ? getMovementTargetingDirection(client)
+                    : getPointerTargetingDirection(client.player, Mod.crosshairTarget);
+            BlockPos scanned = ContextualInteractionTargeting.updateTarget(client.player, dir, null, inputMode);
+            if (scanned != null) {
+                Mod.targetedInteractable = scanned;
+                hitResult = ContextualInteractionTargeting.resolveHit(client.player, scanned);
+            }
+        }
+        if (hitResult == null) {
+            return;
+        }
+        for (Hand hand : Hand.values()) {
+            var result = client.interactionManager.interactBlock(client.player, hand, hitResult);
+            if (result.isAccepted()) {
+                if (result.shouldSwingHand()) {
+                    client.player.swingHand(hand);
+                }
+                itemUseCooldown = 4;
+                return;
+            }
+        }
+    }
+
     private  void lookAt(LivingEntity living, EntityAnchorArgumentType.EntityAnchor anchorPoint, Vec3d target) {
         lookAt(living,anchorPoint,target,false);
     }
@@ -476,6 +731,7 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         double headyaw = MathHelper.wrapDegrees((float)(MathHelper.atan2(f, d) * 57.2957763671875) - 90.0F);
 
         // Normalize prevHeadYaw to avoid 360° wrap in rendering interpolation
+
         while(headyaw - living.prevHeadYaw < -180.0F) {
             living.prevHeadYaw -= 360.0F;
         }
@@ -922,12 +1178,13 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                 }
                 //clipMetric = (float) Math.clamp(clipMetric,Math.min(16F,player.getHeight()),Math.max(Math.min(16F,player.getHeight()),16));
 
-                client.player.prevYaw = (livingYaw);
-                client.player.prevPitch = (livingPitch);
-                client.player.prevHeadYaw = (livingHeadYaw);
-                client.player.prevBodyYaw = (livingBodyYaw);
+
 
             }
+            // client.player.prevYaw = (livingYaw);
+            client.player.prevPitch = (livingPitch);
+            client.player.prevHeadYaw = (livingHeadYaw);
+            client.player.prevBodyYaw = (livingBodyYaw);
         }
         if(pickCooldown <= 0){
             targeted = null;
