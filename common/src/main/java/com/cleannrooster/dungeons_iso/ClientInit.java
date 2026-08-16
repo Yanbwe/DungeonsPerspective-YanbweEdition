@@ -28,6 +28,7 @@ public class ClientInit {
     public static KeyBinding rotateClockwise;
     public static KeyBinding interact;
     public static KeyBinding contextToggleBinding;
+    public static KeyBinding cullDebugBinding;
 
     /**
      * Creates all KeyBinding objects.
@@ -35,6 +36,14 @@ public class ClientInit {
      * Does NOT call any platform-specific registration API — see getAllKeyBindings().
      */
     public static void registerKeyBindings() {
+        // Unbound by default: a support tool, not a feature, and claiming a key in a modpack
+        // invites a clash. Still listed in the controls screen for anyone who wants it.
+        cullDebugBinding = new KeyBinding(
+                "dungeons_iso.binds.cullDebug",
+                InputUtil.Type.KEYSYM,
+                InputUtil.UNKNOWN_KEY.getCode(),
+                "dungeons_iso.binds.category"
+        );
         toggleBinding = new KeyBinding(
                 "dungeons_iso.binds.toggle",
                 InputUtil.Type.KEYSYM,
@@ -136,7 +145,7 @@ public class ClientInit {
                 toggleBinding, isoBinding, moveCameraBinding, lockOn, verticalBinding,
                 clickToMove, zoomInBinding, zoomOutBinding, rotateToggle, rotateClockwise,
                 interact, rotateCounterClockwise, contextToggleBinding, cycleTargetBinding,
-                openLootMenu
+                openLootMenu, cullDebugBinding
         };
     }
 

@@ -2,6 +2,7 @@ package com.cleannrooster.dungeons_iso.mixin;
 
 import com.cleannrooster.dungeons_iso.ModCompat;
 import com.cleannrooster.dungeons_iso.api.*;
+import com.cleannrooster.dungeons_iso.api.cullers.room.CullDebug;
 import com.cleannrooster.dungeons_iso.compat.DragonCompat;
 import com.cleannrooster.dungeons_iso.compat.MidnightControlsCompat;
 import com.cleannrooster.dungeons_iso.compat.SodiumCompat;
@@ -171,6 +172,16 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                 }
             }
         }
+        // Diagnostics live outside the Mod.enabled gate on purpose: "the mod is off" is one of the
+        // states worth being able to see, and a report you cannot reach when things are broken is
+        // no use.
+        if (client.world != null) {
+            CullDebug.tickLog();
+            if (ClientInit.cullDebugBinding.wasPressed()) {
+                CullDebug.report();
+            }
+        }
+
         if (Mod.enabled && client.cameraEntity != null && client.player != null ) {
 
             double x = ((Mod.crosshairTarget != null ? Mod.crosshairTarget.getPos().subtract(client.cameraEntity.getPos()).getX():0));
@@ -851,11 +862,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         }
         Mod.zoom = Math.clamp(Mod.zoom,1F,10F);
 
-        /*if(Mod.enabled && client.worldRenderer != null ){
-            ((WorldRendererAccessor)client.worldRenderer).chunks().forEach(builtChunk -> {{
-                builtChunk.scheduleRebuild(true);
-            }});
-        }*/
         boolean isController = false;
 
         if (ModCompat.isModLoaded("midnightcontrols")) {

@@ -2,6 +2,7 @@ package com.cleannrooster.dungeons_iso.mixin;
 
 import com.cleannrooster.dungeons_iso.ClientInit;
 import com.cleannrooster.dungeons_iso.config.Config;
+import com.cleannrooster.dungeons_iso.api.cullers.room.GhostRenderer;
 import com.cleannrooster.dungeons_iso.mod.Mod;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.BlockState;
@@ -38,6 +39,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(WorldRenderer.class)
 public abstract class WorldRendererMixin {
+
+    @Inject(
+            method = "render",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/render/debug/DebugRenderer;render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;DDD)V"
+            )
+    )
+    private void drawCullGhostXIV(RenderTickCounter tickCounter, boolean renderBlockOutline,
+                                  Camera camera, GameRenderer gameRenderer,
+                                  LightmapTextureManager lightmapTextureManager,
+                                  Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci,
+                                  @Local MatrixStack matrices,
+                                  @Local VertexConsumerProvider.Immediate buffers) {
+        try {
+            GhostRenderer.render(matrices, buffers, camera, gameRenderer);
+        } catch (Exception ignored) {
+        }
+    }
 
     @Inject(
             method = "render",
