@@ -1,18 +1,17 @@
 package com.cleannrooster.dungeons_iso.config;
 
-import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
-import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
-import dev.isxander.yacl3.platform.YACLPlatform;
 
 public class Config {
-    public static final ConfigClassHandler<Config> GSON = ConfigClassHandler
-            .createBuilder(Config.class)
-            .serializer(config -> GsonConfigSerializerBuilder
-                    .create(config)
-                    .setPath(YACLPlatform.getConfigDir().resolve("dungeons_iso_v5.json"))
-                    .build())
-            .build();
+    /**
+     * YACL's handler when YACL is installed, plain Gson over the same file when it is not.
+     * {@code instance()} / {@code load()} / {@code save()} behave identically either way.
+     *
+     * <p>The {@code @SerialEntry} annotations below stay regardless: YACL reads them when it is
+     * present, and when it is absent the JVM drops annotations whose class cannot be resolved, so
+     * they cost nothing rather than throwing.
+     */
+    public static final ConfigHolder<Config> GSON = ConfigHolder.create(new Config());
     @SerialEntry
     public boolean XIV =  false;
 

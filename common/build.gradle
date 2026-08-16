@@ -38,9 +38,5 @@ dependencies {
     // Sodium (optional compat - compile against fabric variant in common)
     modCompileOnly "maven.modrinth:sodium:${rootProject.sodium_version}-${platform}"
 
-    // MixinSquared
-    modImplementation "com.github.bawnorton.mixinsquared:mixinsquared-${platform}:0.2.0"
-    annotationProcessor "com.github.bawnorton.mixinsquared:mixinsquared-${platform}:0.2.0"
-
     // TinyConfig (bundled - pure Java GSON config lib)
 }

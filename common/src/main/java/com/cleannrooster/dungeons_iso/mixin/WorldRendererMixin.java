@@ -3,8 +3,10 @@ package com.cleannrooster.dungeons_iso.mixin;
 import com.cleannrooster.dungeons_iso.ClientInit;
 import com.cleannrooster.dungeons_iso.config.Config;
 import com.cleannrooster.dungeons_iso.api.cullers.room.GhostRenderer;
+import com.cleannrooster.dungeons_iso.api.cullers.room.CullingBackdrop;
 import com.cleannrooster.dungeons_iso.mod.Mod;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.client.MinecraftClient;
@@ -40,22 +42,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(WorldRenderer.class)
 public abstract class WorldRendererMixin {
 
-    @Inject(
-            method = "render",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/render/debug/DebugRenderer;render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;DDD)V"
-            )
-    )
-    private void drawCullGhostXIV(RenderTickCounter tickCounter, boolean renderBlockOutline,
-                                  Camera camera, GameRenderer gameRenderer,
-                                  LightmapTextureManager lightmapTextureManager,
-                                  Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci,
-                                  @Local MatrixStack matrices,
-                                  @Local VertexConsumerProvider.Immediate buffers) {
-        try {
-            GhostRenderer.render(matrices, buffers, camera, gameRenderer);
-        } catch (Exception ignored) {
+    @Inject(method = "renderSky", at = @At("HEAD"), cancellable = true)
+    private void hideSkyBehindCulledCaves(Matrix4f positionMatrix, Matrix4f projectionMatrix,
+                                          float tickDelta, Camera camera, boolean thickFog,
+                                          Runnable fogCallback, CallbackInfo ci) {
+        if (CullingBackdrop.hidesSky()) {
+            // Do not depend on an earlier framebuffer clear retaining BackgroundRenderer's colour:
+            // loader hooks and renderer replacements can move that work around. The sky stage is
+            // before terrain, so explicitly replacing only the colour buffer here is deterministic
+            // and cannot erase terrain or depth that has already been drawn.
+            RenderSystem.clearColor(CullingBackdrop.red(), CullingBackdrop.green(),
+                    CullingBackdrop.blue(), 1.0F);
+            RenderSystem.clear(0x4000, MinecraftClient.IS_SYSTEM_MAC);
+            ci.cancel();
         }
     }
 
@@ -66,12 +65,16 @@ public abstract class WorldRendererMixin {
                     target = "Lnet/minecraft/client/render/debug/DebugRenderer;render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;DDD)V"
             )
     )
-    private void drawContextualInteractableXIV(RenderTickCounter tickCounter, boolean renderBlockOutline,
-                                               Camera camera, GameRenderer gameRenderer,
-                                               LightmapTextureManager lightmapTextureManager,
-                                               Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci,
-                                               @Local MatrixStack matrices,
-                                               @Local VertexConsumerProvider.Immediate buffers) {
+    private void drawWorldOverlaysXIV(RenderTickCounter tickCounter, boolean renderBlockOutline,
+                                  Camera camera, GameRenderer gameRenderer,
+                                  LightmapTextureManager lightmapTextureManager,
+                                  Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci,
+                                  @Local MatrixStack matrices,
+                                  @Local VertexConsumerProvider.Immediate buffers) {
+        try {
+            GhostRenderer.render(matrices, buffers, camera, gameRenderer);
+        } catch (Exception ignored) {
+        }
         if (!Mod.enabled || !Config.GSON.instance().isContextualInteract()) {
             return;
         }

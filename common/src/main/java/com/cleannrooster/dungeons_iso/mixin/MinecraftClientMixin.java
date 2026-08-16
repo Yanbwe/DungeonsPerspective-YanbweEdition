@@ -7,10 +7,9 @@ import com.cleannrooster.dungeons_iso.compat.DragonCompat;
 import com.cleannrooster.dungeons_iso.compat.MidnightControlsCompat;
 import com.cleannrooster.dungeons_iso.compat.SodiumCompat;
 import com.cleannrooster.dungeons_iso.config.Config;
-import com.cleannrooster.dungeons_iso.ui.LootUI;
+import com.cleannrooster.dungeons_iso.ui.OwoScreens;
 import com.cleannrooster.dungeons_iso.util.InteractionTargeting;
 import com.google.common.collect.Lists;
-import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.minecraft.block.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
@@ -206,7 +205,10 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                 contextToggle = !contextToggle;
             }
             if(ClientInit.openLootMenu.wasPressed()){
-                MinecraftClient.getInstance().setScreen(new LootUI());
+                Screen lootScreen = OwoScreens.loot();
+                if (lootScreen != null) {
+                    MinecraftClient.getInstance().setScreen(lootScreen);
+                }
             }
             if(ClientInit.rotateToggle.wasPressed()){
                 rotateToggle = !rotateToggle;
@@ -858,7 +860,13 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         }
         if (client.currentScreen == null && !firstTimeGuiShown && Config.GSON.instance().showFirstTimeGui && !com.cleannrooster.dungeons_iso.config.FirstTimeState.get().choiceMade) {
             firstTimeGuiShown = true;
-            client.setScreen(new com.cleannrooster.dungeons_iso.ui.FirstTimeScreen());
+            // Null without owo-lib. The choice is deliberately not recorded as made in that case,
+            // so installing owo later still gets the player the prompt; the default (on) applies
+            // meanwhile, which is what answering the prompt with "enable" would have done anyway.
+            Screen firstTime = OwoScreens.firstTime();
+            if (firstTime != null) {
+                client.setScreen(firstTime);
+            }
         }
         Mod.zoom = Math.clamp(Mod.zoom,1F,10F);
 

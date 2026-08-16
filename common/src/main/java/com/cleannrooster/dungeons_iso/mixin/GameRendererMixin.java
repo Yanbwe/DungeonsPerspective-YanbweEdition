@@ -4,8 +4,6 @@ import com.cleannrooster.dungeons_iso.api.Ortho;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.VertexSorter;
-import net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer;
-import net.caffeinemc.mods.sodium.client.render.frapi.SodiumRenderer;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.pattern.CachedBlockPosition;
@@ -95,7 +93,17 @@ public abstract class GameRendererMixin {
             Mod.factor = Math.max(0F,( 1F-Math.max(Mod.zoomTime , 0F)))*(float) ((float) Mod.getZoom()*Mod.zoomMetric - Math.max(MinecraftClient.getInstance().cameraEntity.getHeight(),result.getPos().distanceTo(MinecraftClient.getInstance().cameraEntity.getEyePos())));
             Mod.factor2 = Math.clamp((Mod.frustrumZoom+(Mod.shouldReload ?1F : -1F )*MinecraftClient.getInstance().gameRenderer.getCamera().getLastTickDelta())/20F,0.1F,1F) *(float) ((float) Mod.getZoom()*Mod.zoomMetric-Mod.clipMetric -0.15F );
 
-            cir.setReturnValue( matrix4f.perspective((float) (fov * 0.01745329238474369) , (float)MinecraftClient.getInstance().getWindow().getFramebufferWidth() / (float)MinecraftClient.getInstance().getWindow().getFramebufferHeight(),((0.05F*Mod.clipMetric)), MinecraftClient.getInstance().gameRenderer.getFarPlaneDistance()));
+            // clipMetric is zero while the first world frame is being prepared. JOML accepts a
+            // zero near plane, but the resulting projection has an invalid frustum. Vanilla then
+            // loops forever in Frustum#coverBoxAroundSetPosition trying to expand that frustum,
+            // which presents as the client hanging on the world-login screen.
+            float nearPlane = Math.max(0.05F, 0.05F * Mod.clipMetric);
+            cir.setReturnValue(matrix4f.perspective(
+                    (float) (fov * 0.01745329238474369),
+                    (float) MinecraftClient.getInstance().getWindow().getFramebufferWidth()
+                            / (float) MinecraftClient.getInstance().getWindow().getFramebufferHeight(),
+                    nearPlane,
+                    MinecraftClient.getInstance().gameRenderer.getFarPlaneDistance()));
         }
     }
     @Shadow

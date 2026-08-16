@@ -4,6 +4,7 @@ import com.cleannrooster.dungeons_iso.api.MinecraftClientAccessor;
 import com.cleannrooster.dungeons_iso.api.cullers.room.RoomScanner;
 import com.cleannrooster.dungeons_iso.api.cullers.room.RoomSnapshot;
 import com.cleannrooster.dungeons_iso.api.cullers.room.SightlineScanner;
+import com.cleannrooster.dungeons_iso.api.cullers.room.TerrainCulling;
 import com.cleannrooster.dungeons_iso.compat.SodiumCompat;
 import com.cleannrooster.dungeons_iso.config.Config;
 import com.cleannrooster.dungeons_iso.mod.Mod;
@@ -71,10 +72,7 @@ private  Vector3f posOffset ;
             // case shape culling below decides.
             switch (RoomScanner.INSTANCE.test(pos.getX(), pos.getY(), pos.getZ())) {
                 case RoomSnapshot.CULL -> {
-                    Block roomBlock = state.getBlock();
-                    if (!(roomBlock instanceof VaultBlock || roomBlock instanceof SpawnerBlock
-                            || roomBlock instanceof TrialSpawnerBlock || roomBlock instanceof WallMountedBlock
-                            || roomBlock instanceof LadderBlock || roomBlock instanceof DoorBlock)) {
+                    if (!TerrainCulling.isProtected(state.getBlock())) {
                         ci.cancel();
                     }
                     return;
@@ -98,9 +96,7 @@ private  Vector3f posOffset ;
                 return;
             }
 
-            Block block = state.getBlock();
-            if (block instanceof VaultBlock || block instanceof SpawnerBlock || block instanceof TrialSpawnerBlock
-                    || block instanceof WallMountedBlock || block instanceof LadderBlock || block instanceof DoorBlock) {
+            if (TerrainCulling.isProtected(state.getBlock())) {
                 return;
             }
 

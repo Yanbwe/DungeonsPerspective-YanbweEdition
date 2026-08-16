@@ -160,5 +160,6 @@
   "dungeons_iso.config.disableOcclusionCulling.name": "Disable occlusion culling while culling",
   "dungeons_iso.config.disableOcclusionCulling.description": "Turns off Sodium occlusion culling whenever blocks are being removed. Off by default and best left off: with it on, every section in view is drawn with no visibility graph, which in a large modpack costs far more than the culling itself. Turn on only if you see missing terrain through a culled opening.",
   "dungeons_iso.config.cullDebugLog.name": "Log culling state",
-  "dungeons_iso.config.cullDebugLog.description": "Writes a line of culling diagnostics to the log once a second. For troubleshooting only. The keybind report is unaffected and always available."
+  "dungeons_iso.config.cullDebugLog.description": "Writes a line of culling diagnostics to the log once a second. For troubleshooting only. The keybind report is unaffected and always available.",
+  "dungeons_iso.config.requires_yacl": "Dungeons Perspective settings need YetAnotherConfigLib (YACL) installed. Everything else works without it."
 }

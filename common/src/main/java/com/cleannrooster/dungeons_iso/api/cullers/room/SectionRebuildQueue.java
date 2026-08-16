@@ -8,7 +8,6 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 
@@ -66,33 +65,14 @@ public final class SectionRebuildQueue {
         }
 
         int budget = Math.max(1, Math.min(64, Config.GSON.instance().roomSectionsPerTick));
-        SodiumWorldRenderer renderer;
-        try {
-            renderer = SodiumWorldRenderer.instance();
-        } catch (Exception ignored) {
-            // Sodium not initialised yet (or absent). Drop the backlog rather than growing it.
-            this.queue.clear();
-            return;
-        }
-        if (renderer == null) {
-            this.queue.clear();
-            return;
-        }
+        ChunkRebuildScheduler scheduler = ChunkRebuildScheduler.get();
 
         for (int i = 0; i < budget && !this.queue.isEmpty(); i++) {
             long packed = this.queue.removeFirstLong();
-            int sx = ChunkSectionPos.unpackX(packed);
-            int sy = ChunkSectionPos.unpackY(packed);
-            int sz = ChunkSectionPos.unpackZ(packed);
-
-            int minX = sx << 4;
-            int minY = sy << 4;
-            int minZ = sz << 4;
-            try {
-                renderer.scheduleRebuildForBlockArea(
-                        minX, minY, minZ, minX + 15, minY + 15, minZ + 15, false);
-            } catch (Exception ignored) {
-            }
+            scheduler.scheduleSection(
+                    ChunkSectionPos.unpackX(packed),
+                    ChunkSectionPos.unpackY(packed),
+                    ChunkSectionPos.unpackZ(packed));
         }
     }
 

@@ -13,13 +13,23 @@ import net.minecraft.text.Text;
  * Keeping this separate from {@link Gui} (which implements ModMenuApi) means
  * NeoForge can reference this class directly without hitting a
  * NoClassDefFoundError on the ModMenu interface.
+ *
+ * <p>YACL is optional, and this class is the part of the mod that genuinely cannot work without
+ * it — loading it at all with YACL missing is what throws. So the availability test deliberately
+ * does <em>not</em> live here: callers must check {@code Config.GSON.hasScreen()} first, which
+ * keeps the only reference to this class inside a branch that never runs without YACL.
  */
 public class ConfigScreen {
 
-    /** Build and return the YACL config screen, optionally with a parent screen. */
+    /**
+     * Build and return the YACL config screen, optionally with a parent screen.
+     *
+     * <p>Guard every call with {@code Config.GSON.hasScreen()}.
+     */
+    @SuppressWarnings("unchecked")
     public static Screen create(Screen parent) {
         return YetAnotherConfigLib.create(
-                Config.GSON,
+                (dev.isxander.yacl3.config.v2.api.ConfigClassHandler<Config>) Config.GSON.handler(),
                 (defaults, config, builder) -> builder
                         .title(Text.translatable("dungeons_iso.config.title"))
                         .category(ConfigCategory

@@ -156,6 +156,10 @@ public class ClientInit {
         instance = new ClientInit();
         Config.GSON.load();
         com.cleannrooster.dungeons_iso.config.FirstTimeState.load();
+        // Must happen on the client thread, before any world loads. Chunk meshing runs on a worker
+        // pool, and a worker must never be the first thread to load these classes — see
+        // TerrainCulling.warmUp().
+        com.cleannrooster.dungeons_iso.api.cullers.room.TerrainCulling.warmUp();
     }
 
     public static void drawCuboidShapeOutline(MatrixStack matrices, VertexConsumer vertexConsumer, VoxelShape shape, double offsetX, double offsetY, double offsetZ, float red, float green, float blue, float alpha) {

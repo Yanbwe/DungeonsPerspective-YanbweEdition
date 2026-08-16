@@ -18,7 +18,6 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
-import net.spell_engine.client.SpellEngineClient;
 import org.joml.Matrix2f;
 import org.joml.Vector2f;
 import org.spongepowered.asm.mixin.Mixin;
