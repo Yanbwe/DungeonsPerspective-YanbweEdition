@@ -8,16 +8,16 @@ import net.minecraft.util.math.BlockPos;
 /**
  * Decides when intentionally removed terrain should reveal cave fog instead of the day sky.
  *
- * <p>This deliberately does not depend on room detection. Caves and tunnels often have no useful
- * room snapshot, but a small sample of vertical sky visibility still identifies them reliably.
- * The result is eased and has separate enter/leave thresholds so walking through a cave mouth
- * cannot make the background chatter between two states.
+ * <p>A room snapshot is authoritative when one exists. Caves and tunnels often have no useful
+ * room snapshot, so a small sample of vertical sky visibility supplies the fallback. The result
+ * is eased and has separate enter/leave thresholds so walking through a cave mouth cannot make
+ * the background chatter between two states.
  */
 public final class CullingBackdrop {
 
     private static final int[][] SAMPLE_OFFSETS = {
-            {0, 0}, {4, 0}, {-4, 0}, {0, 4}, {0, -4},
-            {4, 4}, {4, -4}, {-4, 4}, {-4, -4}
+            {0, 0}, {3, 0}, {-3, 0}, {0, 3}, {0, -3},
+            {3, 3}, {3, -3}, {-3, 3}, {-3, -3}
     };
     private static final float FADE_IN_PER_SECOND = 3.5F;
     private static final float FADE_OUT_PER_SECOND = 2.5F;
@@ -50,9 +50,14 @@ public final class CullingBackdrop {
             }
         }
 
-        // Enter when a clear majority is covered, but do not leave until the area is mostly open.
-        // The gap is intentional hysteresis for cave mouths and broken roofs.
-        enclosed = enclosed ? covered >= 4 : covered >= 6;
+        boolean detectedRoom = hasRemovedRoomTerrain();
+        boolean playerColumnCovered = !world.isSkyVisible(origin.up());
+
+        // A published room means the roof culler has positively identified an enclosure, so it is
+        // stronger evidence than samples which may land outside a small building. For the fallback,
+        // the player's own column carries the same weight: this catches houses narrower than the
+        // sample grid. Nearby samples retain hysteresis for broad caves and cave entrances.
+        enclosed = detectedRoom || playerColumnCovered || (enclosed ? covered >= 3 : covered >= 5);
         approach(enclosed);
     }
 
@@ -83,13 +88,17 @@ public final class CullingBackdrop {
     }
 
     private static boolean hasRemovedTerrain() {
-        RoomSnapshot room = RoomScanner.INSTANCE.isActive() ? RoomScanner.INSTANCE.snapshot() : null;
-        if (room != null && !room.sections().isEmpty()) {
+        if (hasRemovedRoomTerrain()) {
             return true;
         }
         SightlineMask sight = SightlineScanner.INSTANCE.isActive()
                 ? SightlineScanner.INSTANCE.mask() : null;
         return sight != null && !sight.suppressesCulling() && !sight.sections().isEmpty();
+    }
+
+    private static boolean hasRemovedRoomTerrain() {
+        RoomSnapshot room = RoomScanner.INSTANCE.isActive() ? RoomScanner.INSTANCE.snapshot() : null;
+        return room != null && !room.sections().isEmpty();
     }
 
     private static void approach(boolean active) {
