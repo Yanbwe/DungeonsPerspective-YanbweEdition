@@ -6,10 +6,10 @@ import net.minecraft.client.gui.screen.Screen;
 /**
  * Opens the owo-lib screens when owo-lib is installed, and does nothing when it is not.
  *
- * <p>{@link LootUI} and {@link FirstTimeScreen} both extend owo's {@code BaseOwoScreen}, so merely
- * naming either of them from a call site is enough to make the JVM load owo. They are built
+ * <p>{@link FirstTimeScreen} extends owo's {@code BaseOwoScreen}, so merely
+ * naming it from a call site is enough to make the JVM load owo. It is built
  * reflectively here, behind a class-presence test, so the rest of the mod only ever handles a
- * vanilla {@link Screen} and never mentions their types.
+ * vanilla {@link Screen} and never mentions its type.
  */
 public final class OwoScreens {
 
@@ -17,15 +17,6 @@ public final class OwoScreens {
             ModCompat.isClassPresent("io.wispforest.owo.ui.base.BaseOwoScreen");
 
     private OwoScreens() {
-    }
-
-    public static boolean isAvailable() {
-        return AVAILABLE;
-    }
-
-    /** The loot overlay, or null if owo-lib is not installed. */
-    public static Screen loot() {
-        return build("com.cleannrooster.dungeons_iso.ui.LootUI");
     }
 
     /** The first-run prompt, or null if owo-lib is not installed. */

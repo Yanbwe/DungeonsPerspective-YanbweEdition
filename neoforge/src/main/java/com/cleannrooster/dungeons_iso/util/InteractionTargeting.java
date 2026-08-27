@@ -81,55 +81,6 @@ public final class InteractionTargeting {
                 || state.getBlock() instanceof BellBlock;
     }
 
-    public static boolean isInteractableInRange(
-            ClientPlayerEntity player,
-            BlockPos pos
-    ) {
-        if (player == null || pos == null) {
-            return false;
-        }
-
-        World world = player.getWorld();
-
-        if (!isInteractable(world, pos)) {
-            return false;
-        }
-
-        double range = player.getBlockInteractionRange();
-
-        return squaredDistanceToBlock(player.getEyePos(), pos)
-                <= range * range;
-    }
-
-    private static double squaredDistanceToBlock(
-            Vec3d point,
-            BlockPos pos
-    ) {
-        double nearestX = MathHelper.clamp(
-                point.x,
-                pos.getX(),
-                pos.getX() + 1.0
-        );
-
-        double nearestY = MathHelper.clamp(
-                point.y,
-                pos.getY(),
-                pos.getY() + 1.0
-        );
-
-        double nearestZ = MathHelper.clamp(
-                point.z,
-                pos.getZ(),
-                pos.getZ() + 1.0
-        );
-
-        return point.squaredDistanceTo(
-                nearestX,
-                nearestY,
-                nearestZ
-        );
-    }
-
     private static boolean isCurrentlyUsable(BlockState state) {
 
 

@@ -32,20 +32,12 @@ public class Mod {
     public static double z;
     public static int cooldownIs;
     public static int cooldownWas;
-    public static Vector2f unModMovement = new Vector2f();
     public static int useTimer;
     public static boolean noMouse;
-    // Left-stick deflection from the last input tick, in key-input convention (x = forward,
-    // y = sideways/left), pre-rotation. 0 when no controller / inside deadzone. Used by the
-    // facing logic so the character faces the stick direction under joystick movement.
-    public static float joystickRawFwd;
-    public static float joystickRawSide;
     public static float zoomMetric;
     public static float factor;
-    public static float factorScale = 0.5F;
     public static int zoomOutTimeNoDelay;
     public static float zoomTimeNoDelay;
-    public static float factor2;
     public static long startZoomNoDelay;
     public static boolean isBlocked;
     public static float relativeYaw;
@@ -107,7 +99,6 @@ public class Mod {
     public static long dirtyTime;
     public static long startTime;
     public static long endTime;
-    public static boolean using;
     public static boolean contextToggle;
     public static boolean rotateToggle;
 

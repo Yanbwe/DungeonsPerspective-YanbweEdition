@@ -2,10 +2,7 @@ package com.cleannrooster.dungeons_iso.compat;
 
 import com.cleannrooster.dungeons_iso.api.BlockCuller;
 import com.cleannrooster.dungeons_iso.api.FogOfWar;
-import com.cleannrooster.dungeons_iso.api.cullers.BlockDetector;
-import com.cleannrooster.dungeons_iso.api.cullers.FloodCuller;
 import com.cleannrooster.dungeons_iso.api.cullers.GenericCuller3;
-import com.cleannrooster.dungeons_iso.api.cullers.GenericBlockCuller2;
 import com.cleannrooster.dungeons_iso.api.cullers.room.GhostRenderer;
 import com.cleannrooster.dungeons_iso.api.cullers.room.RoomScanner;
 import com.cleannrooster.dungeons_iso.api.cullers.room.SectionRebuildQueue;
@@ -36,10 +33,8 @@ import static net.minecraft.entity.effect.StatusEffects.DARKNESS;
 
 public class SodiumCompat {
     public static List<BlockCuller> blockCullers = new ArrayList<>();
-    public static BlockCuller detector = new BlockDetector();
     public static List<BlockCuller> blockCullersShapes = new ArrayList<>();
 
-    public static FloodCuller floodCuller = new FloodCuller();
     public static FogOfWar fogOfWar;
     // Room scanner bookkeeping — client thread only.
     private static BlockPos lastScanPos = null;
@@ -49,7 +44,7 @@ public class SodiumCompat {
     private static Vec3d lastCameraPos = null;
     private static int lastSightlineTick = Integer.MIN_VALUE;
     static{
-        blockCullers.addAll(List.of( new GenericCuller3(),floodCuller) );
+        blockCullers.add(new GenericCuller3());
         blockCullersShapes.add(new GenericCuller3());
 
     }

@@ -34,13 +34,9 @@ public class Config {
     @SerialEntry
     public boolean distanceFog =  true;
     @SerialEntry
-    public boolean renderDistanceCap =  true;
-    @SerialEntry
     public float cullAngle = 6.0F;
     @SerialEntry
     public float coneHalfAngle = 45.0F;
-    @SerialEntry
-    public boolean backCull = false;
 
     // ---------------------------------------------------------------- room / roof culling
     // Detects the enclosed space the player is standing in and removes its ceiling, instead of
@@ -56,20 +52,6 @@ public class Config {
      */
     @SerialEntry
     public boolean cullDebugLog = false;
-
-    /**
-     * Disable Sodium's occlusion culling while blocks are being removed.
-     *
-     * <p>Off by default, and worth leaving off: with it on, Sodium draws every section in the
-     * frustum with no visibility graph, which in a large pack costs far more than the culling
-     * itself. It was needed when the cylinder culler removed blocks without reporting which
-     * sections it had changed, leaving Sodium's visibility data stale; the scanners now rebuild
-     * exactly the sections they affect, which regenerates it.
-     *
-     * <p>Turn on only if you see missing terrain through a culled opening.
-     */
-    @SerialEntry
-    public boolean disableOcclusionCulling = false;
 
     /** Master toggle for room/roof culling. When off, the cylinder culler behaves as before. */
     @SerialEntry
@@ -249,17 +231,7 @@ public class Config {
     @SerialEntry
     public boolean dynamicCamera = false;
     @SerialEntry
-    public boolean forceNoDefer =  false;
-    @SerialEntry
     public boolean cameraRelative =  true;
-
-    /**
-     * Native gamepad left-stick movement. When on (and a controller is connected) the left
-     * analog stick drives movement through the same camera-relative pipeline as WASD; while the
-     * stick is deflected past the deadzone it overrides the keyboard for that tick.
-     */
-    @SerialEntry
-    public boolean joystickMovement =  true;
 
     @SerialEntry
     public boolean turnToMouse =  true;
@@ -293,10 +265,6 @@ public class Config {
     public boolean ortho = false;
     @SerialEntry
 
-    public boolean clickToMove = false;
-
-    @SerialEntry
-
     public boolean frustumCulling = true;
 
     @SerialEntry
@@ -311,11 +279,6 @@ public class Config {
     /** Turn-to-mouse facing; forced OFF in Controller mode (movement drives facing instead). */
     public boolean isTurnToMouse() {
         return !controllerMode && turnToMouse;
-    }
-
-    /** Click-to-move; forced OFF in Controller mode. */
-    public boolean isClickToMove() {
-        return !controllerMode && clickToMove;
     }
 
     /** Contextual combat targeting; forced ON in Controller mode. */
@@ -338,8 +301,4 @@ public class Config {
         return !controllerMode && rollTowardsCursor;
     }
 
-    /** Native gamepad left-stick movement; forced ON in Controller mode. */
-    public boolean isJoystickMovement() {
-        return controllerMode || joystickMovement;
-    }
 }

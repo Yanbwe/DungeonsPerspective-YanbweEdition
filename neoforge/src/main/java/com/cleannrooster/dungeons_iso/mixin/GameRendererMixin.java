@@ -79,7 +79,6 @@ public abstract class GameRendererMixin {
                 matrix4f.translate(this.zoomX, -this.zoomY, 0.0F);
                 matrix4f.scale(this.zoom, this.zoom, 1.0F);
             }
-            Mod.factorScale = Math.max(0F,( 1F-Math.max(Mod.zoomTime , 0F)))*Config.GSON.instance().zNearFactor;
             float mod = 1;
             float mod2 = 1;
             if(MinecraftClient.getInstance().cameraEntity instanceof LivingEntity living){
@@ -91,7 +90,6 @@ public abstract class GameRendererMixin {
                     new RaycastContext(
                             MinecraftClient.getInstance().player.getEyePos(),MinecraftClient.getInstance().gameRenderer.getCamera().getPos(), RaycastContext.ShapeType.VISUAL, RaycastContext.FluidHandling.NONE,MinecraftClient.getInstance().cameraEntity));
             Mod.factor = Math.max(0F,( 1F-Math.max(Mod.zoomTime , 0F)))*(float) ((float) Mod.getZoom()*Mod.zoomMetric - Math.max(MinecraftClient.getInstance().cameraEntity.getHeight(),result.getPos().distanceTo(MinecraftClient.getInstance().cameraEntity.getEyePos())));
-            Mod.factor2 = Math.clamp((Mod.frustrumZoom+(Mod.shouldReload ?1F : -1F )*MinecraftClient.getInstance().gameRenderer.getCamera().getLastTickDelta())/20F,0.1F,1F) *(float) ((float) Mod.getZoom()*Mod.zoomMetric-Mod.clipMetric -0.15F );
 
             // clipMetric is zero while the first world frame is being prepared. JOML accepts a
             // zero near plane, but the resulting projection has an invalid frustum. Vanilla then

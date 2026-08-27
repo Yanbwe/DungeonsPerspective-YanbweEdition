@@ -8,12 +8,6 @@ import java.util.List;
 import java.util.Set;
 
 public class MixinPlugin  implements IMixinConfigPlugin {
-    /**
-     * Sodium compatibility mixins are currently neither registered nor enabled. The guard logic
-     * is retained so Sodium support can be re-enabled later if needed.
-     */
-    private static final boolean ENABLE_SODIUM_COMPAT = false;
-
     @Override
     public void onLoad(String mixinPackage) {
     }
@@ -25,10 +19,6 @@ public class MixinPlugin  implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-
-        if (!ENABLE_SODIUM_COMPAT && mixinClassName.contains(".compat.sodium.")) {
-            return false;
-        }
 
         if (mixinClassName.contains(".compat.")) {
             String[] parts = mixinClassName.split("\\.");

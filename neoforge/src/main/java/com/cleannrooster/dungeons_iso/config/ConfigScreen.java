@@ -131,18 +131,6 @@ public class ConfigScreen {
                                                 .build())
                                         .option(Option
                                                 .<Boolean>createBuilder()
-                                                .name(Text.translatable("dungeons_iso.config.joystickMovement.name"))
-                                                .description(OptionDescription.of(Text.translatable(
-                                                        "dungeons_iso.config.joystickMovement.description")))
-                                                .binding(
-                                                        defaults.joystickMovement,
-                                                        () -> config.joystickMovement,
-                                                        (value) -> config.joystickMovement = value
-                                                )
-                                                .controller(BooleanControllerBuilder::create)
-                                                .build())
-                                        .option(Option
-                                                .<Boolean>createBuilder()
                                                 .name(Text.translatable("dungeons_iso.config.dynamic_camera.name"))
                                                 .description(OptionDescription.of(Text.translatable(
                                                         "dungeons_iso.config.dynamic_camera.description")))
@@ -256,18 +244,6 @@ public class ConfigScreen {
                                                 .build())
                                         .option(Option
                                                 .<Boolean>createBuilder()
-                                                .name(Text.translatable("dungeons_iso.config.click_to_move.name"))
-                                                .description(OptionDescription.of(Text.translatable(
-                                                        "dungeons_iso.config.click_to_move.description")))
-                                                .binding(
-                                                        defaults.clickToMove,
-                                                        () -> config.clickToMove,
-                                                        (value) -> config.clickToMove = value
-                                                )
-                                                .controller(BooleanControllerBuilder::create)
-                                                .build())
-                                        .option(Option
-                                                .<Boolean>createBuilder()
                                                 .name(Text.translatable("dungeons_iso.config.forceAutoJump.name"))
                                                 .description(OptionDescription.of(Text.translatable(
                                                         "dungeons_iso.config.forceAutoJump.description")))
@@ -369,18 +345,6 @@ public class ConfigScreen {
                                                 .build())
                                         .option(Option
                                                 .<Boolean>createBuilder()
-                                                .name(Text.translatable("dungeons_iso.config.renderDistanceCap.name"))
-                                                .description(OptionDescription.of(Text.translatable(
-                                                        "dungeons_iso.config.renderDistanceCap.description")))
-                                                .binding(
-                                                        defaults.renderDistanceCap,
-                                                        () -> config.renderDistanceCap,
-                                                        (value) -> config.renderDistanceCap = value
-                                                )
-                                                .controller(BooleanControllerBuilder::create)
-                                                .build())
-                                        .option(Option
-                                                .<Boolean>createBuilder()
                                                 .name(Text.translatable("dungeons_iso.config.frustumCulling.name"))
                                                 .description(OptionDescription.of(Text.translatable(
                                                         "dungeons_iso.config.frustumCulling.description")))
@@ -388,18 +352,6 @@ public class ConfigScreen {
                                                         defaults.frustumCulling,
                                                         () -> config.frustumCulling,
                                                         (value) -> config.frustumCulling = value
-                                                )
-                                                .controller(BooleanControllerBuilder::create)
-                                                .build())
-                                        .option(Option
-                                                .<Boolean>createBuilder()
-                                                .name(Text.translatable("dungeons_iso.config.backcull.name"))
-                                                .description(OptionDescription.of(Text.translatable(
-                                                        "dungeons_iso.config.backcull.description")))
-                                                .binding(
-                                                        defaults.backCull,
-                                                        () -> config.backCull,
-                                                        (value) -> config.backCull = value
                                                 )
                                                 .controller(BooleanControllerBuilder::create)
                                                 .build())
@@ -427,18 +379,6 @@ public class ConfigScreen {
                                                 )
                                                 .controller(opt -> new FloatSliderControllerBuilderImpl(opt).range(15F, 75F).step(1F))
                                                 .build())
-                                        .option(Option
-                                                .<Boolean>createBuilder()
-                                                .name(Text.translatable("dungeons_iso.config.force_no_defer.name"))
-                                                .description(OptionDescription.of(Text.translatable(
-                                                        "dungeons_iso.config.force_no_defer.description")))
-                                                .binding(
-                                                        defaults.forceNoDefer,
-                                                        () -> config.forceNoDefer,
-                                                        (value) -> config.forceNoDefer = value
-                                                )
-                                                .controller(BooleanControllerBuilder::create)
-                                                .build())
                                         .build())
 
                                 .group(OptionGroup.createBuilder()
@@ -452,18 +392,6 @@ public class ConfigScreen {
                                                         defaults.roomCulling,
                                                         () -> config.roomCulling,
                                                         (value) -> config.roomCulling = value
-                                                )
-                                                .controller(BooleanControllerBuilder::create)
-                                                .build())
-                                        .option(Option
-                                                .<Boolean>createBuilder()
-                                                .name(Text.translatable("dungeons_iso.config.disableOcclusionCulling.name"))
-                                                .description(OptionDescription.of(Text.translatable(
-                                                        "dungeons_iso.config.disableOcclusionCulling.description")))
-                                                .binding(
-                                                        defaults.disableOcclusionCulling,
-                                                        () -> config.disableOcclusionCulling,
-                                                        (value) -> config.disableOcclusionCulling = value
                                                 )
                                                 .controller(BooleanControllerBuilder::create)
                                                 .build())

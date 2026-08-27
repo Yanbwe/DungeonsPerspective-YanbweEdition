@@ -24,9 +24,6 @@ dependencies {
 
     // Combat Roll (optional compat)
     modCompileOnly "maven.modrinth:combat-roll:2.0.4+1.21.1-neoforge"
-
-    // Sodium (optional compat)
-    modCompileOnly "maven.modrinth:sodium:${rootProject.sodium_version}-neoforge"
 }
 
 processResources {

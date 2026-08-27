@@ -17,13 +17,10 @@ public class ClientInit {
     public static KeyBinding isoBinding;
     public static KeyBinding verticalBinding;
     public static KeyBinding lockOn;
-    public static KeyBinding clickToMove;
     public static KeyBinding moveCameraBinding;
     public static KeyBinding zoomInBinding;
     public static KeyBinding zoomOutBinding;
     public static KeyBinding rotateToggle;
-    public static KeyBinding cycleTargetBinding;
-    public static KeyBinding openLootMenu;
     public static KeyBinding rotateCounterClockwise;
     public static KeyBinding rotateClockwise;
     public static KeyBinding interact;
@@ -74,12 +71,6 @@ public class ClientInit {
                 GLFW.GLFW_KEY_RIGHT_ALT,
                 "dungeons_iso.binds.category"
         );
-        clickToMove = new KeyBinding(
-                "dungeons_iso.binds.clickToMove",
-                InputUtil.Type.MOUSE,
-                InputUtil.UNKNOWN_KEY.getCode(),
-                "dungeons_iso.binds.category"
-        );
         zoomInBinding = new KeyBinding(
                 "dungeons_iso.binds.zoomIn",
                 InputUtil.Type.MOUSE,
@@ -122,18 +113,6 @@ public class ClientInit {
                 GLFW.GLFW_KEY_END,
                 "dungeons_iso.binds.category"
         );
-        cycleTargetBinding = new KeyBinding(
-                "dungeons_iso.binds.cycleTargetBinding",
-                InputUtil.Type.MOUSE,
-                GLFW.GLFW_MOUSE_BUTTON_4,
-                "dungeons_iso.binds.category"
-        );
-        openLootMenu = new KeyBinding(
-                "dungeons_iso.binds.openLootMenu",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_Z,
-                "dungeons_iso.binds.category"
-        );
     }
 
     /**
@@ -143,9 +122,9 @@ public class ClientInit {
     public static KeyBinding[] getAllKeyBindings() {
         return new KeyBinding[]{
                 toggleBinding, isoBinding, moveCameraBinding, lockOn, verticalBinding,
-                clickToMove, zoomInBinding, zoomOutBinding, rotateToggle, rotateClockwise,
-                interact, rotateCounterClockwise, contextToggleBinding, cycleTargetBinding,
-                openLootMenu, cullDebugBinding
+                zoomInBinding, zoomOutBinding, rotateToggle, rotateClockwise,
+                interact, rotateCounterClockwise, contextToggleBinding,
+                cullDebugBinding
         };
     }
 

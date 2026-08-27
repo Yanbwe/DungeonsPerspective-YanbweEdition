@@ -1,6 +1,5 @@
 package com.cleannrooster.dungeons_iso.api.cullers.room;
 
-import com.cleannrooster.dungeons_iso.ModCompat;
 import com.cleannrooster.dungeons_iso.mod.Mod;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -30,13 +29,6 @@ import net.minecraft.util.math.Direction;
 public final class TerrainCulling {
 
     /**
-     * True when Sodium is installed. Sodium replaces vanilla's chunk-build pipeline wholesale, so
-     * the vanilla hooks would never fire for terrain anyway — but they are also reachable from
-     * other callers, and standing down explicitly is cheaper than reasoning about which.
-     */
-    public static final boolean SODIUM = ModCompat.isModLoaded("sodium");
-
-    /**
      * Set once, on the client thread, by {@link #warmUp()}. Until then every query answers "not
      * culling" without touching anything else.
      *
@@ -60,7 +52,6 @@ public final class TerrainCulling {
     public static void warmUp() {
         // Reading the field is enough to force each class through <clinit> here rather than later
         // on a worker. The results are deliberately discarded.
-        boolean unusedSodium = SODIUM;
         boolean unusedEnabled = Mod.enabled;
         RoomScanner.INSTANCE.isActive();
         SightlineScanner.INSTANCE.isActive();

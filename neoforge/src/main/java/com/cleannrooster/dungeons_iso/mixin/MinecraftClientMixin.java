@@ -4,7 +4,6 @@ import com.cleannrooster.dungeons_iso.ModCompat;
 import com.cleannrooster.dungeons_iso.api.*;
 import com.cleannrooster.dungeons_iso.api.cullers.room.CullDebug;
 import com.cleannrooster.dungeons_iso.compat.DragonCompat;
-import com.cleannrooster.dungeons_iso.compat.MidnightControlsCompat;
 import com.cleannrooster.dungeons_iso.compat.SodiumCompat;
 import com.cleannrooster.dungeons_iso.config.Config;
 import com.cleannrooster.dungeons_iso.ui.OwoScreens;
@@ -80,7 +79,6 @@ import static com.cleannrooster.dungeons_iso.mod.Mod.*;
 
 @Mixin(value = MinecraftClient.class,priority = 0 )
 public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
-    private boolean canUseItem;
 
     // Per-tick exponential smoothing factor for the player's cosmetic pitch (see lookAt()).
     // Runs at the fixed 20 TPS tick; ~0.35 reaches the target in a few ticks while easing out
@@ -94,8 +92,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
 
     @Shadow
     private int itemUseCooldown;
-    private Vec3d originalLocation;
-    private boolean hasClicked;
     private Vec3d moveDir;
 
     @Override
@@ -108,23 +104,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
     public ClientPlayerEntity player;
     double lookingTime;
 
-    @Override
-    public HitResult getLocation() {
-        return location;
-    }
-
-    @Override
-    public void setLocation(HitResult location) {
-        this.location = location;
-    }
-    @Override
-    public Vec3d getOriginalLocation() {
-        return originalLocation;
-    }
-    @Override
-    public void setOriginalLocation(Vec3d location) {
-        this.originalLocation = location;
-    }
     @Shadow
     abstract void doItemUse();
 
@@ -132,8 +111,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
     @Shadow
     @Final
     public GameOptions options;
-    public boolean   isIndoors;
-    public HitResult location;
 
     private static Vec3d movementInputToVelocity(Vec3d movementInput, float speed, float yaw) {
         double d = movementInput.lengthSquared();
@@ -157,12 +134,8 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
 
             spell = SpellEngineCompat.isCasting();
         }
-        boolean isController = false;
         Mod.zoom = Math.clamp(Mod.zoom,1F,10F);
 
-        if (ModCompat.isModLoaded("midnightcontrols")) {
-            isController = MidnightControlsCompat.isEnabled();
-        }
         if(MinecraftClient.getInstance().player != null) {
             for(int i = 0; i < 9; ++i) {
                 if (this.options.hotbarKeys[i].isPressed() && MinecraftClient.getInstance().player.getInventory().selectedSlot != i) {
@@ -204,12 +177,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
             if(ClientInit.contextToggleBinding.wasPressed()){
                 contextToggle = !contextToggle;
             }
-            if(ClientInit.openLootMenu.wasPressed()){
-                Screen lootScreen = OwoScreens.loot();
-                if (lootScreen != null) {
-                    MinecraftClient.getInstance().setScreen(lootScreen);
-                }
-            }
             if(ClientInit.rotateToggle.wasPressed()){
                 rotateToggle = !rotateToggle;
             }
@@ -235,86 +202,7 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                 }
             }
 
-            if(  ClientInit.clickToMove.isPressed() && Config.GSON.instance().isClickToMove()) {
-
-                if (  (Mod.crosshairTarget instanceof BlockHitResult hit &&  isInteractable(hit))){
-                    Hand[] var1 = Hand.values();
-                    for (Hand hand : var1) {
-                        var interact = client.interactionManager.interactBlock(player, hand, hit);
-                        if (interact.isAccepted()) {
-
-                            ((MinecraftClientAccessor) client).setLocation(null);
-                            ((MinecraftClientAccessor) client).setOriginalLocation(null);
-                            if (interact.shouldSwingHand()) {
-                                itemUseCooldown = 4;
-
-                                this.player.swingHand(hand);
-                                return;
-
-                            }
-                        }
-                    }
-
-                }
-                else if (   (Mod.crosshairTarget instanceof EntityHitResult hit && hit.getPos().distanceTo(player.getEyePos()) <= player.getEntityInteractionRange()/2) ){
-                    Hand[] var1 = Hand.values();
-                    for (Hand hand : var1) {
-                        var interact = client.interactionManager.interactEntity(player, hit.getEntity(), hand);
-
-                        if (interact.isAccepted()) {
-
-                            ((MinecraftClientAccessor) client).setLocation(null);
-                            ((MinecraftClientAccessor) client).setOriginalLocation(null);
-                            if (interact.shouldSwingHand()) {
-                                itemUseCooldown = 4;
-
-                                this.player.swingHand(hand);
-                                return;
-
-                            }
-                        }
-                    }
-                    Mod.using = true;
-
-                }
-                else
-                if(  Mod.crosshairTarget != null && !(Mod.crosshairTarget instanceof BlockHitResult hit &&  isInteractable(hit))) {
-
-                    ((MinecraftClientAccessor) client).setLocation(Mod.crosshairTarget);
-                    ((MinecraftClientAccessor) client).setOriginalLocation(client.player.getPos());
-                }
-
-                return;
-            }
-            Mod.using = false;
-
-
             boolean bool = false;
-            if(!player.isFallFlying() && this.location != null && Config.GSON.instance().isClickToMove()){
-                Vec3d vec3d2 = new Vec3d((double)this.player.sidewaysSpeed, (double)this.player.upwardSpeed, (double)this.player.forwardSpeed);
-
-
-           /*     while(this.options.pickItemKey.wasPressed() || this.options.useKey.wasPressed() || this.options.attackKey.wasPressed()){
-                    if(Mod.crosshairTarget != null) {
-                        this.player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, Mod.crosshairTarget.getPos());
-                    }
-                    return;
-                }
-                if (this.options.pickItemKey.isPressed() || this.options.useKey.isPressed() || this.options.attackKey.isPressed()){
-                    if(Mod.crosshairTarget != null) {
-
-                        this.player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, Mod.crosshairTarget.getPos());
-                    }
-                    return;
-                }*/
-
-            }
-           /* if (this.options.attackKey.wasPressed()) {
-                if(crosshairTarget instanceof EntityHitResult entityHitResult){
-                    targeted = entityHitResult.getEntity();
-                    pickCooldown = 20;
-                }
-            }*/
             if(this.options.attackKey.isPressed() ){
                 mouseCooldown =  40+(int)(0.2F*20F/client.player.getAttributeValue(EntityAttributes.GENERIC_ATTACK_SPEED));
             }
@@ -451,14 +339,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                                           - (client.options.backKey.isPressed()    ? 1f : 0f);
                             float rawSide = (client.options.leftKey.isPressed()    ? 1f : 0f)
                                           - (client.options.rightKey.isPressed()   ? 1f : 0f);
-                            // No movement key held but the left stick is deflected: face the stick
-                            // direction (keys take priority). Mod.joystickRaw* is in the same
-                            // key-input convention as rawFwd/rawSide.
-                            if (rawFwd == 0 && rawSide == 0
-                                    && (Mod.joystickRawFwd != 0 || Mod.joystickRawSide != 0)) {
-                                rawFwd  = Mod.joystickRawFwd;
-                                rawSide = Mod.joystickRawSide;
-                            }
                             if (rawFwd != 0 || rawSide != 0) {
                                  moveDir = movementInputToVelocity(new Vec3d(rawSide, 0, rawFwd), 1.0F, Mod.yaw);
                                 lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES,
@@ -485,10 +365,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                     float tickDelta = camera.getLastTickDelta();
 
                     if (Mod.crosshairTarget != null) {
-
-/*
-                    if( mouseCooldown >= 40 || mouseCooldown <= 0){
-*/
 
                         if(Mod.targeted != null){
                             EntityHitResult result = new EntityHitResult(targeted,targeted.getEyePos());
@@ -523,41 +399,10 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                             lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, lookTarget,true);
                         }
 
-                        /*
-                    }
-*/
-
 
                     }
 
                 }
-
-
-
-            // if(player.getVehicle() != null){
-            //     player.setHeadYaw(MathHelper.clampAngle(player.headYaw, player.getVehicle().getYaw() , (float) ( 135)));
-
-            //     player.setYaw( MathHelper.clampAngle(player.headYaw, player.getVehicle().getYaw() , (float) ( 135)));
-            //     player.bodyYaw = player.getYaw();
-
-
-
-            // }
-                /*
-
-                double d = Mod.crosshairTarget.getPos().x - vec3d.x;
-                double e = Mod.crosshairTarget.getPos().y - vec3d.y;
-                double f = Mod.crosshairTarget.getPos().z - vec3d.z;
-                double g = Math.sqrt(d * d + f * f);
-                double d2 = Mod.prevCrosshairTarget.getPos().x - vec3d.x;
-                double e2 = Mod.prevCrosshairTarget.getPos().y - vec3d.y;
-                double f2 = Mod.prevCrosshairTarget.getPos().z - vec3d.z;
-                double g2 = Math.sqrt(d2 * d2 + f2 * f2);
-                client.player.setPitch(MathHelper.lerp(tickDelta,MathHelper.wrapDegrees((float)(-(MathHelper.atan2(e2, g2) * 57.2957763671875)))  ,MathHelper.wrapDegrees((float)(-(MathHelper.atan2(e, g) * 57.2957763671875)))  ));
-                client.player.setYaw(MathHelper.lerp(tickDelta,MathHelper.wrapDegrees((float)(MathHelper.atan2(f2, d2) * 57.2957763671875) - 90.0F)  ,MathHelper.wrapDegrees((float)(MathHelper.atan2(f, d) * 57.2957763671875) - 90.0F)  ));
-                client.player.setHeadYaw(MathHelper.lerp(tickDelta,MathHelper.wrapDegrees((float)(MathHelper.atan2(f2, d2) * 57.2957763671875) - 90.0F) ,MathHelper.wrapDegrees((float)(MathHelper.atan2(f, d) * 57.2957763671875) - 90.0F) ));
-*/
-
 
         }
         else{
@@ -785,70 +630,8 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         // every tick that oscillates around headYaw → visible body-rotation jitter.
         living.bodyYaw = living.getHeadYaw();
     }
-    private static <T, C> T raycast(Vec3d start, Vec3d end, C context, BiFunction<C, BlockPos, T> blockHitFactory, Function<C, T> missFactory) {
-        if (start.equals(end)) {
-            return missFactory.apply(context);
-        } else {
-            double d = MathHelper.lerp(-1.0E-7, end.x, start.x);
-            double e = MathHelper.lerp(-1.0E-7, end.y, start.y);
-            double f = MathHelper.lerp(-1.0E-7, end.z, start.z);
-            double g = MathHelper.lerp(-1.0E-7, start.x, end.x);
-            double h = MathHelper.lerp(-1.0E-7, start.y, end.y);
-            double i = MathHelper.lerp(-1.0E-7, start.z, end.z);
-            int j = MathHelper.floor(g);
-            int k = MathHelper.floor(h);
-            int l = MathHelper.floor(i);
-            BlockPos.Mutable mutable = new BlockPos.Mutable(j, k, l);
-            T object = blockHitFactory.apply(context, mutable);
-            if (object != null) {
-                return object;
-            } else {
-                double m = d - g;
-                double n = e - h;
-                double o = f - i;
-                int p = MathHelper.sign(m);
-                int q = MathHelper.sign(n);
-                int r = MathHelper.sign(o);
-                double s = p == 0 ? Double.MAX_VALUE : (double)p / m;
-                double t = q == 0 ? Double.MAX_VALUE : (double)q / n;
-                double u = r == 0 ? Double.MAX_VALUE : (double)r / o;
-                double v = s * (p > 0 ? 1.0 - MathHelper.fractionalPart(g) : MathHelper.fractionalPart(g));
-                double w = t * (q > 0 ? 1.0 - MathHelper.fractionalPart(h) : MathHelper.fractionalPart(h));
-                double x = u * (r > 0 ? 1.0 - MathHelper.fractionalPart(i) : MathHelper.fractionalPart(i));
-
-                Object object2;
-                do {
-                    if (!(v <= 1.0) && !(w <= 1.0) && !(x <= 1.0)) {
-                        return missFactory.apply(context);
-                    }
-
-                    if (v < w) {
-                        if (v < x) {
-                            j += p;
-                            v += s;
-                        } else {
-                            l += r;
-                            x += u;
-                        }
-                    } else if (w < x) {
-                        k += q;
-                        w += t;
-                    } else {
-                        l += r;
-                        x += u;
-                    }
-
-                    object2 = blockHitFactory.apply(context, mutable.set(j, k, l));
-                } while(object2 == null);
-
-                return (T) object2;
-            }
-        }
-    }
     public boolean first = false;
     public boolean firstTimeGuiShown = false;
-    public boolean isUse = false;
-    public boolean disableTargeting = false;
 
 
     @Inject(method = "tick", at = @At("TAIL"))
@@ -870,11 +653,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
         }
         Mod.zoom = Math.clamp(Mod.zoom,1F,10F);
 
-        boolean isController = false;
-
-        if (ModCompat.isModLoaded("midnightcontrols")) {
-            isController = MidnightControlsCompat.isEnabled();
-        }
         if (client.currentScreen == null && ( Config.GSON.instance().force || (Config.GSON.instance().onStartup && !first) ||ClientInit.toggleBinding.wasPressed() || (
                 this.options.togglePerspectiveKey.isPressed() && Mod.enabled
         ))) {
@@ -945,7 +723,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
                 mouseCooldown = 40 + (int) (0.2*20F / client.player.getAttributeValue(EntityAttributes.GENERIC_ATTACK_SPEED));
             }
             if (client.player.isUsingItem() || (this.options.useKey.isPressed()) || spell) {
-                isUse = true;
                 bool = true;
             }
             boolean bool2 = false;
@@ -966,197 +743,6 @@ public abstract class MinecraftClientMixin implements MinecraftClientAccessor {
             ){
                 bool = true;
             }
-            if((originalLocation != null && location != null  && !(this.location instanceof EntityHitResult entityHitResult) && this.player.squaredDistanceTo(originalLocation) >= this.originalLocation.squaredDistanceTo(location.getPos())-0.5) || this.player.input.pressingBack ||
-                    this.player.input.pressingRight ||
-                    this.player.input.pressingLeft||
-                    this.player.input.pressingForward){
-
-                this.location = null;
-                this.originalLocation = null;
-
-            }
-            else{
-                if(originalLocation != null && location != null && this.location instanceof EntityHitResult entityHitResult) {
-                    this.location = new EntityHitResult(entityHitResult.getEntity(),entityHitResult.getEntity().getPos());
-                    this.originalLocation = this.player.getPos();
-
-                }
-            }
-         /*   if(ModCompat.isModLoaded("bettercombat") && mouseCooldown > 0 && !bool2  && Config.GSON.instance().additionalMeleeAssistance )){
-                Entity entity = null;
-                var additionMod =  player.getEntityInteractionRange() * 1.25;
-                List<LivingEntity> living = player.getWorld().getEntitiesByClass(LivingEntity.class,player.getBoundingBox().expand(additionMod),
-                        (target) ->{
-                            return target != player && player.canSee(target) &&  target.distanceTo(player) < additionMod
-                                    && target.getPos().subtract(player.getPos().subtract(player.getRotationVec(1.0F).multiply(additionMod))).normalize().dotProduct(player.getRotationVec(1.0F).normalize()) > 0.5F
-                                    && target.getPos().subtract(player.getPos()).normalize().dotProduct(player.getRotationVec(1.0F).normalize()) > 0;
-                        });
-                if(!living.isEmpty()) {
-                    var vec3d =  player.getPos();
-                    living.sort(Comparator.comparing((a) -> a.getPos().distanceTo(vec3d)));
-                    if (crosshairTarget instanceof EntityHitResult result) {
-                        pickedTarget = result.getEntity();
-                    }
-                    else if(!disableTargeting) {
-                        entity = living.get(0);
-                    }
-                    else{
-                        pickedTarget = null;
-                    }
-                    if(ClientInit.cycleTargetBinding.wasPressed()){
-                        if(disableTargeting) {
-                            if (!living.isEmpty()) {
-                                pickedTarget = living.get(0);
-                                disableTargeting = false;
-                            }
-                        }
-                        else if(pickedTarget == null ) {
-                            if (!living.isEmpty()) {
-                                pickedTarget = living.get(0);
-                            }
-                        }
-                        else{
-                            if(living.contains(pickedTarget)) {
-
-                                if (living.size() > living.indexOf(pickedTarget) + 1) {
-                                    pickedTarget = living.get(living.indexOf(pickedTarget) + 1);
-                                    disableTargeting = false;
-
-                                } else {
-                                    disableTargeting = true;
-                                    pickedTarget = null;
-
-                                    player.sendMessage(Text.translatable("Disabled Targeting"));
-
-                                }
-                            }
-                            else{
-                                disableTargeting = true;
-                                pickedTarget = null;
-
-                                player.sendMessage(Text.translatable("Disabled Targeting"));
-
-                            }
-                        }
-
-                    }
-                    if(Mod.pickedTarget != null && Mod.pickedTarget instanceof LivingEntity livingPicekdTarget  && living.contains(livingPicekdTarget) && livingPicekdTarget.isAlive()) {
-
-                        Mod.crosshairTarget = new EntityHitResult(Mod.pickedTarget,Mod.pickedTarget.getEyePos());
-                        Mod.prevCrosshairTarget = new EntityHitResult(Mod.pickedTarget, Mod.pickedTarget.getEyePos());
-                        Mod.targeted = Mod.pickedTarget;
-
-                    }
-                    else {
-                        Mod.crosshairTarget = entity != null ? new EntityHitResult(entity, living.getFirst().getEyePos()) : crosshairTarget;
-                        Mod.prevCrosshairTarget = entity != null ?new EntityHitResult(entity, living.getFirst().getEyePos()) : prevCrosshairTarget;
-                        Mod.targeted = entity;
-
-
-                    }
-
-                }
-                else{
-                    Mod.targeted = null;
-                    pickedTarget = null;
-
-                }
-
-            }
-            else{
-                Mod.targeted = null;
-                pickedTarget = null;
-
-
-            }*/
-/*
-            if (  (  (!Config.GSON.instance().turnToMouse &&     !player.isFallFlying()) && (
-                       (!(bool ) && !using && mouseCooldown <= 0  && !(player.getMainHandStack().getItem() instanceof CrossbowItem item ) &&  client.player.input.getMovementInput().length() > 0.1)))) {
-                if(Mod.targeted != null){
-                    EntityHitResult result = new EntityHitResult(targeted,targeted.getEyePos());
-                    lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, result.getPos(),true);
-
-                }else {
-                    if (client.player.getVehicle() != null) {
-                        Vec3d vec3d = movementInputToVelocity(new Vec3d(client.player.input.movementSideways, 0, client.player.input.movementForward), 1.0F, client.player.getVehicle().getYaw());
-                        lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, client.player.getEyePos().add(vec3d.normalize()), true);
-                    } else {
-                        lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, client.player.getEyePos().add(client.player.getMovement().subtract(
-                                0, client.player.getMovement().getY(), 0).normalize()), true);
-
-                    }
-                }
-                lookingTime = client.world.getTime();
-
-
-                //client.player.getVehicle().lookAt(EntityAnchorArgumentType.EntityAnchor.EYES,client.player.getVehicle().getEyePos().add(vec3d.normalize()));
-            } else {
-
-                GameRenderer renderer = client.gameRenderer;
-                Camera camera = renderer.getCamera();
-                float tickDelta = camera.getLastTickDelta();
-
-                if (targeted != null) {
-
-
-                    if (!player.isFallFlying()) {
-
-                        lookAt(client.player,EntityAnchorArgumentType.EntityAnchor.EYES, new Vec3d(
-                                Mod.targeted.getPos().getX(),
-                                Mod.targeted.getEyeY(),
-                                Mod.targeted.getPos().getZ()),true);
-                    }
-
-
-                }
-                else
-                if (Mod.crosshairTarget != null) {
-
-
-
-                    if (!player.isFallFlying()) {
-
-                        // Cosmetic look target: flatten to eye level so the character doesn't crane
-                        // up at overhead blocks (forest canopy) in normal mouse-look. Vertical look
-                        // is kept for entities, while aiming/casting, and for blocks worth acting on
-                        // (the held item is the right tool to harvest it, or it is interactable).
-                        // Interaction targeting is decoupled (see GameRendererMixin), so this never
-                        // affects where actions actually land.
-                        Vec3d lookTarget = crosshairTarget.getPos();
-                        boolean allowVertical = spell || client.player.isUsingItem()
-                                || crosshairTarget instanceof EntityHitResult;
-                        if (!allowVertical && crosshairTarget instanceof BlockHitResult blockHit && client.world != null) {
-                            BlockState state = client.world.getBlockState(blockHit.getBlockPos());
-                            if (!state.isAir() && (client.player.getMainHandStack().getMiningSpeedMultiplier(state) > 1.5f
-                                    || Mod.isInteractable(blockHit))) {
-                                allowVertical = true;
-                            }
-                        }
-                        if (!allowVertical) {
-                            lookTarget = new Vec3d(lookTarget.x, client.player.getEyePos().y, lookTarget.z);
-                        }
-                        lookAt(client.player,EntityAnchorArgumentType.EntityAnchor.EYES, lookTarget,true);
-                    }
-
-
-                }
-
-            }
-            if(Mod.targeted != null){
-                EntityHitResult result = new EntityHitResult(targeted,targeted.getEyePos());
-                lookAt(client.player, EntityAnchorArgumentType.EntityAnchor.EYES, result.getPos(),true);
-
-            }
-
-            if(player.getVehicle() != null){
-                player.setHeadYaw(MathHelper.clampAngle(player.headYaw, player.getVehicle().getYaw() , (float) ( 135)));
-
-                player.setYaw( MathHelper.clampAngle(player.headYaw, player.getVehicle().getYaw() , (float) ( 135)));
-                player.bodyYaw = player.getYaw();
-
-
-            }
-            */
             if(Objects.nonNull(hit)) {
                 notmoving = false;
                 if (hit.getType().equals(HitResult.Type.BLOCK)) {

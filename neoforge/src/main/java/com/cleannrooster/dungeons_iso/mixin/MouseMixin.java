@@ -1,7 +1,6 @@
 package com.cleannrooster.dungeons_iso.mixin;
 
 import com.cleannrooster.dungeons_iso.api.*;
-import com.cleannrooster.dungeons_iso.compat.MidnightControlsCompat;
 import com.cleannrooster.dungeons_iso.ModCompat;
 import net.minecraft.client.tutorial.TutorialManager;
 import net.minecraft.block.BlockState;
@@ -55,7 +54,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 @Mixin(Mouse.class)
-public class MouseMixin implements MouseAccessor {
+public class MouseMixin {
     @Shadow
     private boolean cursorLocked;
     @Shadow
@@ -137,8 +136,6 @@ public class MouseMixin implements MouseAccessor {
             InputUtil.setCursorParameters(client.getWindow().getHandle(), GLFW.GLFW_CURSOR_NORMAL, x, y);
         }
     }
-    int lasti;
-    int timeGone = 0;
 
     /**
      * Computes the ray origin for the current mouse position.
@@ -227,28 +224,6 @@ public class MouseMixin implements MouseAccessor {
 
         if (Mod.enabled && cameraEntity != null && client.player != null) {
 
-            boolean isController = false;
-            if (ModCompat.isModLoaded("midnightcontrols")) {
-                isController = MidnightControlsCompat.isEnabled();
-            }
-            if (isController) {
-                if (timeGone > 40) {
-                    InputUtil.setCursorParameters(client.getWindow().getHandle(), InputUtil.GLFW_CURSOR_DISABLED,
-                            x, y
-                    );
-                    Mod.noMouse = true;
-                }
-                if (i == lasti) {
-                    timeGone++;
-                } else {
-                    if (timeGone > 40) {
-                        timeGone = 0;
-                        InputUtil.setCursorParameters(client.getWindow().getHandle(), InputUtil.GLFW_CURSOR_NORMAL,
-                                x, y
-                        );
-                    }
-                }
-            }
             if (client.options.pickItemKey.isPressed() || ClientInit.moveCameraBinding.isPressed() || Mod.rotateToggle) {
                 if (lastX == null || lastY == null) {
                     InputUtil.setCursorParameters(client.getWindow().getHandle(), InputUtil.GLFW_CURSOR_DISABLED,
@@ -558,8 +533,4 @@ public class MouseMixin implements MouseAccessor {
 
         }
 
-    @Override
-    public void setRightClick(boolean bool) {
-        rightButtonClicked = bool;
-    }
 }

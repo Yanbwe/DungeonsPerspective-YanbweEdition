@@ -33,8 +33,8 @@ import org.spongepowered.asm.mixin.injection.At;
  *       through the opening instead of hiding what the roof used to cover.</li>
  * </ul>
  *
- * <p>Sodium uses its own rendering pipeline and bypasses this class entirely. The Sodium-specific
- * mixins are not currently registered, so this vanilla/NeoForge hook is the current active path.
+ * <p>Sodium uses its own rendering pipeline and bypasses this class entirely, so this
+ * vanilla/NeoForge hook is the active path.
  */
 @Mixin(ChunkRendererRegion.class)
 public abstract class ChunkRendererRegionMixin {
@@ -42,7 +42,7 @@ public abstract class ChunkRendererRegionMixin {
     @ModifyReturnValue(method = "getBlockState", at = @At("RETURN"))
     private BlockState cullTerrainXIV(BlockState original, BlockPos pos) {
         // Hot path: called for every block and every neighbour of every section build.
-        if (TerrainCulling.SODIUM || TerrainCulling.idle()) {
+        if (TerrainCulling.idle()) {
             return original;
         }
         try {

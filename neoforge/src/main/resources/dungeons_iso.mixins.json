@@ -21,7 +21,6 @@
     "LightmapTextureManagerMixin",
     "BackgroundRendererMixin",
     "ChunkRendererRegionMixin",
-    "KeyBindingMixin",
     "WorldRendererMixin"
 
   ],
