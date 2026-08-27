@@ -10,7 +10,7 @@
   "contact": {
     "email": ""
   },
-  "license": "MIT",
+  "license": "LGPL-3.0",
   "icon": "assets/dungeons_iso/icon.png",
   "environment": "*",
   "entrypoints": {
