@@ -5,10 +5,11 @@ license = "LGPL-3.0"
 [[mods]]
 modId = "dungeons_iso"
 version = "${version}"
-displayName = "Dungeons Perspective"
-authors = "cleannrooster/Forg"
+displayName = "Dungeons Perspective - Yanbwe Edition"
+authors = "cleannrooster/Forg, Yanbwe"
 description = '''
 Changes Minecraft's perspective to be more like Minecraft Dungeons.
+NeoForge-only edition for Minecraft 1.21.1.
 '''
 logoFile = "assets/dungeons_iso/icon.png"
 
@@ -20,17 +21,12 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.dungeons_iso]]
-modId = "sodium"
-type = "optional"
-versionRange = "*"
-ordering = "NONE"
-side = "BOTH"
-[[dependencies.dungeons_iso]]
 modId = "owo"
 type = "optional"
 versionRange = "*"
 ordering = "NONE"
 side = "BOTH"
+
 [[dependencies.dungeons_iso]]
 modId = "yet_another_config_lib_v3"
 type = "optional"

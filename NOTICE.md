@@ -6,6 +6,8 @@
 
 This is a modified version of **Dungeons Perspective** by cleannrooster/Forg:
 
+This Yanbwe Edition is packaged as a NeoForge-only mod for Minecraft 1.21.1.
+
 - https://github.com/cleannrooster/dungeons-perspective
 
 Dungeons Perspective is itself based on **Minecraft XIV** by ashkitten:
